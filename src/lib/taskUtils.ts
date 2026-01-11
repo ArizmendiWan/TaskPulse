@@ -24,7 +24,7 @@ export function isAtRisk(task: Task, now = new Date()): boolean {
   const isDueSoonWindow = diffHours >= 0 && diffHours <= 48
   const isCriticalWindow = diffHours >= 0 && diffHours <= 24
   const notStarted = task.status === 'unassigned' || task.status === 'assigned'
-  const notMoving = task.status !== 'in_progress' && task.status !== 'done'
+  const notMoving = task.status !== 'in_progress'
 
   return (isDueSoonWindow && notStarted) || (isCriticalWindow && notMoving)
 }
