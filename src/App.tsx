@@ -48,9 +48,13 @@ function uuid() {
   )
 }
 
-function projectShareLink(projectId: string) {
-  const url = new URL(window.location.href)
-  url.searchParams.set('projectId', projectId)
+function projectShareLink(project: Project) {
+  const url = new URL(window.location.origin + window.location.pathname)
+  url.searchParams.set('projectId', project.id)
+  url.searchParams.set('name', project.name)
+  if (project.course) {
+    url.searchParams.set('course', project.course)
+  }
   return url.toString()
 }
 
@@ -116,7 +120,28 @@ function App() {
     [projects, activeProjectId],
   )
   const resolvedView: 'overview' | 'project' | 'create' =
-    view === 'project' && !activeProject ? 'overview' : view
+    view === 'project' && !activeProject && !initialProjectId ? 'overview' : view
+
+  // Handle joining a project via link
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const pid = params.get('projectId')
+    const pname = params.get('name')
+    const pcourse = params.get('course')
+
+    if (pid && pname && !projects.find((p) => p.id === pid)) {
+      const now = new Date().toISOString()
+      const joined: Project = {
+        id: pid,
+        name: pname,
+        course: pcourse || undefined,
+        members: [],
+        tasks: [],
+        createdAt: now,
+      }
+      setProjects((prev) => [...prev, joined])
+    }
+  }, []) // Run once on mount
   const memberList = useMemo(
     () =>
       activeProject
@@ -724,11 +749,11 @@ function App() {
                 <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Invite Link</p>
                 <div className="flex items-center gap-1 sm:gap-2">
                   <p className="hidden sm:block text-xs font-bold text-slate-600 truncate max-w-[100px] lg:max-w-[300px]">
-                    {projectShareLink(activeProject.id)}
+                    {projectShareLink(activeProject)}
                   </p>
                   <button
                     type="button"
-                    onClick={() => copyLink(projectShareLink(activeProject.id))}
+                    onClick={() => copyLink(projectShareLink(activeProject))}
                     className="p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all flex items-center gap-2"
                     title="Copy Link"
                   >
