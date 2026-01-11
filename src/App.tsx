@@ -55,6 +55,9 @@ function projectShareLink(project: Project) {
   if (project.course) {
     url.searchParams.set('course', project.course)
   }
+  if (project.members.length > 0) {
+    url.searchParams.set('members', project.members.join(','))
+  }
   return url.toString()
 }
 
@@ -128,18 +131,33 @@ function App() {
     const pid = params.get('projectId')
     const pname = params.get('name')
     const pcourse = params.get('course')
+    const pmembers = params.get('members')?.split(',').filter(Boolean) || []
 
-    if (pid && pname && !projects.find((p) => p.id === pid)) {
-      const now = new Date().toISOString()
-      const joined: Project = {
-        id: pid,
-        name: pname,
-        course: pcourse || undefined,
-        members: [],
-        tasks: [],
-        createdAt: now,
+    if (pid && pname) {
+      const existing = projects.find((p) => p.id === pid)
+      if (!existing) {
+        const now = new Date().toISOString()
+        const joined: Project = {
+          id: pid,
+          name: pname,
+          course: pcourse || undefined,
+          members: pmembers,
+          tasks: [],
+          createdAt: now,
+        }
+        setProjects((prev) => [...prev, joined])
+      } else if (pmembers.length > 0) {
+        // Update members if new ones are found in the link
+        setProjects((prev) =>
+          prev.map((p) => {
+            if (p.id === pid) {
+              const mergedMembers = Array.from(new Set([...p.members, ...pmembers]))
+              return { ...p, members: mergedMembers }
+            }
+            return p
+          }),
+        )
       }
-      setProjects((prev) => [...prev, joined])
     }
   }, []) // Run once on mount
   const memberList = useMemo(
