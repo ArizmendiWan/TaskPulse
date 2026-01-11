@@ -1,5 +1,5 @@
 export type TaskDifficulty = 'S' | 'M' | 'L' | ''
-export type TaskStatus = 'unassigned' | 'assigned' | 'in_progress' | 'done'
+export type TaskStatus = 'unassigned' | 'not_started' | 'in_progress' | 'done'
 
 export type ActivityType =
   | 'created'
@@ -20,7 +20,7 @@ export interface Task {
   title: string
   description: string
   dueAt: string
-  owner: string
+  owners: string[]
   difficulty: TaskDifficulty
   status: TaskStatus
   activity: ActivityItem[]

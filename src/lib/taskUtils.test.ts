@@ -16,7 +16,7 @@ const baseTask: Task = {
   title: 'Sample',
   description: '',
   dueAt: '2025-01-02T00:00',
-  owner: '',
+  owners: [],
   difficulty: '',
   status: 'unassigned',
   activity: [],
@@ -33,7 +33,7 @@ beforeEach(() => {
 
 describe('task utils', () => {
   it('detects overdue tasks', () => {
-    const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'assigned' }
+    const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'not_started' }
     expect(isOverdue(task)).toBe(true)
     expect(deriveStatus(task)).toBe('overdue')
   })
@@ -49,7 +49,7 @@ describe('task utils', () => {
   })
 
   it('marks at risk when within 24h and not in progress', () => {
-    const task: Task = { ...baseTask, dueAt: '2025-01-01T10:00', status: 'assigned' }
+    const task: Task = { ...baseTask, dueAt: '2025-01-01T10:00', status: 'not_started' }
     expect(isAtRisk(task)).toBe(true)
   })
 
@@ -60,8 +60,8 @@ describe('task utils', () => {
 
   it('filters by owner and overdue', () => {
     const tasks: Task[] = [
-      { ...baseTask, id: '1', owner: 'Alex', status: 'assigned' },
-      { ...baseTask, id: '2', owner: 'Mei', status: 'assigned', dueAt: '2024-12-30T00:00' },
+      { ...baseTask, id: '1', owners: ['Alex'], status: 'not_started' },
+      { ...baseTask, id: '2', owners: ['Mei'], status: 'not_started', dueAt: '2024-12-30T00:00' },
     ]
     expect(filterMyTasks(tasks, 'Alex')).toHaveLength(1)
     expect(filterOverdue(tasks)).toHaveLength(1)
@@ -70,7 +70,7 @@ describe('task utils', () => {
   it('filters due soon and at risk collections', () => {
     const tasks: Task[] = [
       { ...baseTask, id: '1', dueAt: '2025-01-01T12:00', status: 'unassigned' },
-      { ...baseTask, id: '2', dueAt: '2025-02-01T12:00', status: 'assigned' },
+      { ...baseTask, id: '2', dueAt: '2025-02-01T12:00', status: 'not_started' },
     ]
     expect(filterDueSoon(tasks)).toHaveLength(1)
     expect(filterAtRisk(tasks)).toHaveLength(1)

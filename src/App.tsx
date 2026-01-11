@@ -21,7 +21,7 @@ type FilterKey = 'all' | 'mine' | 'dueSoon' | 'atRisk' | 'overdue'
 
 const statusLabels: Record<string, string> = {
   unassigned: 'Unassigned',
-  assigned: 'Assigned',
+  not_started: 'Not Started',
   in_progress: 'In Progress',
   done: 'Done',
   overdue: 'Overdue',
@@ -29,7 +29,7 @@ const statusLabels: Record<string, string> = {
 
 const statusPills: Record<string, string> = {
   unassigned: 'bg-slate-50 text-slate-500 border border-slate-200',
-  assigned: 'bg-amber-50 text-amber-700 border border-amber-200',
+  not_started: 'bg-amber-50 text-amber-700 border border-amber-200',
   in_progress: 'bg-blue-50 text-blue-700 border border-blue-200',
   done: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
   overdue: 'bg-rose-50 text-rose-700 border border-rose-200',
@@ -103,11 +103,17 @@ function App() {
   )
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
-  const [taskForm, setTaskForm] = useState({
+  const [taskForm, setTaskForm] = useState<{
+    title: string
+    description: string
+    dueAt: string
+    owners: string[]
+    difficulty: string
+  }>({
     title: '',
     description: '',
     dueAt: '',
-    owner: '',
+    owners: [],
     difficulty: '',
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
@@ -277,13 +283,13 @@ function App() {
     e.preventDefault()
     if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt) return
     const now = new Date().toISOString()
-    const status: TaskStatus = taskForm.owner ? 'assigned' : 'unassigned'
+    const status: TaskStatus = taskForm.owners.length > 0 ? 'not_started' : 'unassigned'
     const newTask: Task = {
       id: uuid(),
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
-      owner: taskForm.owner.trim(),
+      owners: taskForm.owners.map((o) => o.trim()),
       difficulty: (taskForm.difficulty as Task['difficulty']) || '',
       status,
       activity: [
@@ -296,17 +302,23 @@ function App() {
       updatedAt: now,
     }
 
-    upsertProject((project) => ({
-      ...project,
-      members: ensureMemberList(project.members, taskForm.owner),
-      tasks: [...project.tasks, newTask],
-    }))
+    upsertProject((project) => {
+      let nextMembers = project.members
+      taskForm.owners.forEach((o) => {
+        nextMembers = ensureMemberList(nextMembers, o)
+      })
+      return {
+        ...project,
+        members: nextMembers,
+        tasks: [...project.tasks, newTask],
+      }
+    })
 
     setTaskForm({
       title: '',
       description: '',
       dueAt: '',
-      owner: '',
+      owners: [],
       difficulty: '',
     })
     setShowTaskModal(false)
@@ -333,27 +345,33 @@ function App() {
     }))
   }
 
-  function handleOwnerChange(task: Task, next: string) {
-    if (task.owner === next) return
+  function handleOwnerChange(task: Task, ownerName: string) {
+    if (!ownerName) return
+    const isAlreadyOwner = task.owners.includes(ownerName)
+    const nextOwners = isAlreadyOwner
+      ? task.owners.filter((o) => o !== ownerName)
+      : [...task.owners, ownerName]
+
     updateTask(task.id, (t) => ({
       ...t,
-      owner: next,
-      status: next ? (t.status === 'unassigned' ? 'assigned' : t.status) : 'unassigned',
+      owners: nextOwners,
+      status: nextOwners.length > 0 ? (t.status === 'unassigned' ? 'not_started' : t.status) : 'unassigned',
       activity: [
         ...t.activity,
         createActivity(
           'owner_changed',
-          next
-            ? `Owner: ${t.owner || 'Unassigned'} → ${next}`
-            : `Owner cleared (was ${t.owner || 'Unassigned'})`,
+          isAlreadyOwner
+            ? `Removed owner: ${ownerName}`
+            : `Added owner: ${ownerName}`,
         ),
       ],
       updatedAt: new Date().toISOString(),
     }))
-    if (activeProject) {
+
+    if (activeProject && !isAlreadyOwner) {
       upsertProject((project) => ({
         ...project,
-        members: ensureMemberList(project.members, next),
+        members: ensureMemberList(project.members, ownerName),
       }))
     }
   }
@@ -910,21 +928,41 @@ function App() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
                               <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owner</p>
-                                <select
-                                  value={task.owner}
-                                  onChange={(e) => handleOwnerChange(task, e.target.value)}
-                                  className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                >
-                                  <option value="">Unassigned</option>
-                                  {[...new Set([...activeProject.members, currentMember].filter(Boolean))].map(
-                                    (member) => (
-                                      <option key={member} value={member}>
-                                        {member}
-                                      </option>
-                                    ),
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owners</p>
+                                <div className="flex flex-wrap gap-1.5 min-h-[42px] p-2 rounded-2xl border-2 border-slate-50 bg-slate-50">
+                                  {task.owners.length === 0 ? (
+                                    <span className="text-[10px] font-bold text-slate-400 p-1">Unassigned</span>
+                                  ) : (
+                                    task.owners.map((owner) => (
+                                      <span 
+                                        key={owner}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm"
+                                      >
+                                        {owner}
+                                        <button 
+                                          onClick={() => handleOwnerChange(task, owner)}
+                                          className="text-slate-300 hover:text-rose-500 transition-colors"
+                                        >
+                                          ×
+                                        </button>
+                                      </span>
+                                    ))
                                   )}
-                                </select>
+                                  <select
+                                    value=""
+                                    onChange={(e) => handleOwnerChange(task, e.target.value)}
+                                    className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
+                                  >
+                                    <option value="">+ Add</option>
+                                    {[...new Set([...activeProject.members, currentMember].filter(Boolean))].filter(m => !task.owners.includes(m)).map(
+                                      (member) => (
+                                        <option key={member} value={member}>
+                                          {member}
+                                        </option>
+                                      ),
+                                    )}
+                                  </select>
+                                </div>
                               </div>
 
                               <div className="space-y-2">
@@ -935,7 +973,7 @@ function App() {
                                   className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
                                 >
                                   <option value="unassigned">Unassigned</option>
-                                  <option value="assigned">Assigned</option>
+                                  <option value="not_started">Not Started</option>
                                   <option value="in_progress">In Progress</option>
                                   <option value="done">Done</option>
                                 </select>
@@ -1077,21 +1115,44 @@ function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owner</label>
-                <input
-                  name="task-owner"
-                  value={taskForm.owner}
-                  onChange={(e) => setTaskForm((t) => ({ ...t, owner: e.target.value }))}
-                  list="member-options-modal"
-                  className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                  placeholder="Unassigned"
-                />
-                <datalist id="member-options-modal">
-                  {activeProject?.members.map((member) => (
-                    <option key={member} value={member} />
+                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owners</label>
+                <div className="flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 border-slate-50 bg-slate-50">
+                  {[...new Set([...(activeProject?.members || []), currentMember].filter(Boolean))].map((member) => (
+                    <button
+                      key={member}
+                      type="button"
+                      onClick={() => {
+                        setTaskForm((t) => ({
+                          ...t,
+                          owners: t.owners.includes(member)
+                            ? t.owners.filter((o) => o !== member)
+                            : [...t.owners, member],
+                        }))
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                        taskForm.owners.includes(member)
+                          ? 'bg-amber-500 text-white shadow-md'
+                          : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      {member}
+                    </button>
                   ))}
-                  {currentMember && <option value={currentMember} />}
-                </datalist>
+                  <input
+                    className="bg-transparent border-none focus:outline-none text-xs font-black w-24 ml-2"
+                    placeholder="+ Add Name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        const val = e.currentTarget.value.trim()
+                        if (val && !taskForm.owners.includes(val)) {
+                          setTaskForm((t) => ({ ...t, owners: [...t.owners, val] }))
+                          e.currentTarget.value = ''
+                        }
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -23,7 +23,7 @@ export function isAtRisk(task: Task, now = new Date()): boolean {
   const diffHours = (new Date(task.dueAt).getTime() - now.getTime()) / HOUR_MS
   const isDueSoonWindow = diffHours >= 0 && diffHours <= 48
   const isCriticalWindow = diffHours >= 0 && diffHours <= 24
-  const notStarted = task.status === 'unassigned' || task.status === 'assigned'
+  const notStarted = task.status === 'unassigned' || task.status === 'not_started'
   const notMoving = task.status !== 'in_progress'
 
   return (isDueSoonWindow && notStarted) || (isCriticalWindow && notMoving)
@@ -48,7 +48,7 @@ export function sortByDue(tasks: Task[]): Task[] {
 
 export function filterMyTasks(tasks: Task[], owner: string | null): Task[] {
   if (!owner) return []
-  return sortByDue(tasks.filter((t) => t.owner === owner))
+  return sortByDue(tasks.filter((t) => t.owners.includes(owner)))
 }
 
 export function filterDueSoon(tasks: Task[], now = new Date()): Task[] {
