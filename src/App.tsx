@@ -2,6 +2,8 @@ import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { loadMemberName, loadProjects, saveMemberName, saveProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus } from './types'
+import { db } from './lib/firebase'
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore'
 import {
   deriveStatus,
   filterAtRisk,
@@ -48,16 +50,9 @@ function uuid() {
   )
 }
 
-function projectShareLink(project: Project) {
-  const url = new URL(window.location.origin + window.location.pathname)
-  url.searchParams.set('projectId', project.id)
-  url.searchParams.set('name', project.name)
-  if (project.course) {
-    url.searchParams.set('course', project.course)
-  }
-  if (project.members.length > 0) {
-    url.searchParams.set('members', project.members.join(','))
-  }
+function projectShareLink(projectId: string) {
+  const url = new URL(window.location.href)
+  url.searchParams.set('projectId', projectId)
   return url.toString()
 }
 
@@ -124,42 +119,6 @@ function App() {
   )
   const resolvedView: 'overview' | 'project' | 'create' =
     view === 'project' && !activeProject && !initialProjectId ? 'overview' : view
-
-  // Handle joining a project via link
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const pid = params.get('projectId')
-    const pname = params.get('name')
-    const pcourse = params.get('course')
-    const pmembers = params.get('members')?.split(',').filter(Boolean) || []
-
-    if (pid && pname) {
-      const existing = projects.find((p) => p.id === pid)
-      if (!existing) {
-        const now = new Date().toISOString()
-        const joined: Project = {
-          id: pid,
-          name: pname,
-          course: pcourse || undefined,
-          members: pmembers,
-          tasks: [],
-          createdAt: now,
-        }
-        setProjects((prev) => [...prev, joined])
-      } else if (pmembers.length > 0) {
-        // Update members if new ones are found in the link
-        setProjects((prev) =>
-          prev.map((p) => {
-            if (p.id === pid) {
-              const mergedMembers = Array.from(new Set([...p.members, ...pmembers]))
-              return { ...p, members: mergedMembers }
-            }
-            return p
-          }),
-        )
-      }
-    }
-  }, []) // Run once on mount
   const memberList = useMemo(
     () =>
       activeProject
@@ -171,6 +130,49 @@ function App() {
   useEffect(() => {
     saveProjects(projects)
   }, [projects])
+
+  // Firebase Real-time Sync
+  useEffect(() => {
+    if (!activeProjectId) return
+
+    const docRef = doc(db, 'projects', activeProjectId)
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data() as Project
+        setProjects((prev) => {
+          const exists = prev.some((p) => p.id === data.id)
+          if (exists) {
+            // Only update if data is actually different to avoid loops
+            const existing = prev.find((p) => p.id === data.id)
+            if (JSON.stringify(existing) === JSON.stringify(data)) return prev
+            return prev.map((p) => (p.id === data.id ? data : p))
+          }
+          return [...prev, data]
+        })
+      }
+    })
+
+    return () => unsubscribe()
+  }, [activeProjectId])
+
+  // Handle joining via link
+  useEffect(() => {
+    if (initialProjectId && !projects.find((p) => p.id === initialProjectId)) {
+      const fetchProject = async () => {
+        try {
+          const docRef = doc(db, 'projects', initialProjectId)
+          const snap = await getDoc(docRef)
+          if (snap.exists()) {
+            const data = snap.data() as Project
+            setProjects((prev) => [...prev, data])
+          }
+        } catch (err) {
+          console.error('Failed to fetch project from Firebase', err)
+        }
+      }
+      fetchProject()
+    }
+  }, [initialProjectId])
 
   useEffect(() => {
     if (!activeProjectId) return
@@ -201,9 +203,16 @@ function App() {
   }, [activeProject, filter, currentMember])
 
   function upsertProject(mapper: (project: Project) => Project) {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === activeProjectId ? mapper(p) : p)),
-    )
+    setProjects((prev) => {
+      const next = prev.map((p) => (p.id === activeProjectId ? mapper(p) : p))
+      const updated = next.find((p) => p.id === activeProjectId)
+      if (updated) {
+        setDoc(doc(db, 'projects', updated.id), updated).catch((err) =>
+          console.error('Firebase sync error:', err),
+        )
+      }
+      return next
+    })
   }
 
   function goToOverview() {
@@ -244,6 +253,9 @@ function App() {
     }
     const nextProjects = [...projects, created]
     setProjects(nextProjects)
+    setDoc(doc(db, 'projects', created.id), created).catch((err) =>
+      console.error('Firebase create error:', err),
+    )
     setCurrentMember('')
     setMemberNameInput('')
     setNewProject({ name: '', course: '' })
@@ -284,17 +296,11 @@ function App() {
       updatedAt: now,
     }
 
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === activeProject.id
-          ? {
-              ...project,
-              members: ensureMemberList(project.members, taskForm.owner),
-              tasks: [...project.tasks, newTask],
-            }
-          : project,
-      ),
-    )
+    upsertProject((project) => ({
+      ...project,
+      members: ensureMemberList(project.members, taskForm.owner),
+      tasks: [...project.tasks, newTask],
+    }))
 
     setTaskForm({
       title: '',
@@ -308,13 +314,10 @@ function App() {
 
   function updateTask(taskId: string, updater: (task: Task) => Task) {
     if (!activeProject) return
-    setProjects((prev) =>
-      prev.map((project) =>
-        project.id === activeProject.id
-          ? { ...project, tasks: project.tasks.map((t) => (t.id === taskId ? updater(t) : t)) }
-          : project,
-      ),
-    )
+    upsertProject((project) => ({
+      ...project,
+      tasks: project.tasks.map((t) => (t.id === taskId ? updater(t) : t)),
+    }))
   }
 
   function handleStatusChange(task: Task, next: TaskStatus) {
@@ -767,11 +770,11 @@ function App() {
                 <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Invite Link</p>
                 <div className="flex items-center gap-1 sm:gap-2">
                   <p className="hidden sm:block text-xs font-bold text-slate-600 truncate max-w-[100px] lg:max-w-[300px]">
-                    {projectShareLink(activeProject)}
+                    {projectShareLink(activeProject.id)}
                   </p>
                   <button
                     type="button"
-                    onClick={() => copyLink(projectShareLink(activeProject))}
+                    onClick={() => copyLink(projectShareLink(activeProject.id))}
                     className="p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all flex items-center gap-2"
                     title="Copy Link"
                   >
