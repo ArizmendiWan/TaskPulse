@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { loadMemberName, loadProjects, saveMemberName, saveProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus } from './types'
 import { db } from './lib/firebase'
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import {
   deriveStatus,
   filterAtRisk,
@@ -268,6 +268,18 @@ function App() {
     goToProject(id)
   }
 
+  function handleDeleteProject(id: string, name: string) {
+    if (window.confirm(`Are you sure you want to delete the project "${name}"? This action cannot be undone.`)) {
+      setProjects((prev) => prev.filter((p) => p.id !== id))
+      deleteDoc(doc(db, 'projects', id)).catch((err) =>
+        console.error('Firebase delete project error:', err),
+      )
+      if (activeProjectId === id) {
+        goToOverview()
+      }
+    }
+  }
+
   function handleJoinProject(e: React.FormEvent) {
     e.preventDefault()
     if (!activeProject || !memberNameInput.trim()) return
@@ -330,6 +342,16 @@ function App() {
       ...project,
       tasks: project.tasks.map((t) => (t.id === taskId ? updater(t) : t)),
     }))
+  }
+
+  function handleDeleteTask(task: Task) {
+    if (window.confirm(`Are you sure you want to delete the task "${task.title}"?`)) {
+      if (!activeProject) return
+      upsertProject((project) => ({
+        ...project,
+        tasks: project.tasks.filter((t) => t.id !== task.id),
+      }))
+    }
   }
 
   function handleStatusChange(task: Task, next: TaskStatus) {
@@ -535,13 +557,23 @@ function App() {
                           {project.tasks.length} tasks · {project.members.length} members
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => goToProject(project.id)}
-                        className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
-                      >
-                        OPEN
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => goToProject(project.id)}
+                          className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
+                        >
+                          OPEN
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProject(project.id, project.name)}
+                          className="shrink-0 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-100 transition-colors"
+                          title="Delete Project"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-6 grid grid-cols-2 gap-3">
@@ -615,6 +647,13 @@ function App() {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Project Info</p>
+                    <button
+                      onClick={() => handleDeleteProject(activeProject.id, activeProject.name)}
+                      className="p-1 rounded-md text-slate-300 hover:text-rose-500 transition-colors"
+                      title="Delete Project"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight truncate">{activeProject.name}</h3>
@@ -922,6 +961,14 @@ function App() {
                                   className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all"
                                 >
                                   <svg className={`transition-transform duration-300 ${expandedTasks[task.id] ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTask(task)}
+                                  className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all"
+                                  title="Delete Task"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                 </button>
                               </div>
                             </div>
