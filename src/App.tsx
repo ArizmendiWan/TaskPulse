@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type React from 'react'
-import { loadMemberName, saveProjects } from './storage'
+import { loadMemberId, loadMemberName, saveMemberInfo, saveProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus, User } from './types'
 import { db } from './lib/firebase'
 import { saveUser, getUserByEmail, getUserProjects, getUserById } from './lib/userUtils'
@@ -97,10 +97,17 @@ function App() {
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [memberNameInput, setMemberNameInput] = useState('')
   const [memberEmailInput, setMemberEmailInput] = useState('')
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(loadMemberId())
+  const [currentUserName, setCurrentUserName] = useState<string | null>(loadMemberName())
 
   const [userCache, setUserCache] = useState<Record<string, User>>({})
+
+  // Fetch projects on load if logged in
+  useEffect(() => {
+    if (currentUserId && projects.length === 0 && view !== 'login') {
+      getUserProjects(currentUserId).then(setProjects).catch(console.error)
+    }
+  }, [currentUserId])
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
   const [loginForm, setLoginForm] = useState({ name: '', email: '' })
@@ -211,7 +218,11 @@ function App() {
     [projects, activeProjectId],
   )
   const resolvedView: 'overview' | 'project' | 'create' | 'login' =
-    view === 'project' && !activeProject && !initialProjectId ? 'overview' : view
+    !currentUserId && view !== 'create'
+      ? 'login'
+      : view === 'project' && !activeProject && !initialProjectId
+        ? 'overview'
+        : view
   const memberList = useMemo(
     () => (activeProject ? Array.from(new Set(activeProject.members.filter(Boolean))) : []),
     [activeProject],
@@ -277,7 +288,7 @@ function App() {
   useEffect(() => {
     if (!activeProjectId) return
     const storedName = loadMemberName()
-    setMemberNameInput(storedName)
+    setMemberNameInput(storedName ?? '')
   }, [activeProjectId])
 
   // Load user projects when logged in
@@ -451,6 +462,7 @@ function App() {
 
         setCurrentUserId(existingUser.id)
         setCurrentUserName(existingUser.name)
+        saveMemberInfo(existingUser.id, existingUser.name)
         setProjects(userProjects)
         setLoginForm({ name: '', email: '' })
         setView('overview')
@@ -475,6 +487,7 @@ function App() {
 
         setCurrentUserId(newUserId)
         setCurrentUserName(name)
+        saveMemberInfo(newUserId, name)
         setProjects([])
         setLoginForm({ name: '', email: '' })
         setView('overview')
@@ -491,6 +504,7 @@ function App() {
   function handleLogout() {
     setCurrentUserId(null)
     setCurrentUserName(null)
+    saveMemberInfo(null, null)
     setActiveProjectId(null)
     setProjects([])
     goToOverview()
@@ -513,11 +527,11 @@ function App() {
     const created: Project = {
       id,
       name: newProject.name.trim(),
-      course: newProject.course.trim() || undefined,
+      course: newProject.course.trim() || null,
       members: currentUserId ? [currentUserId] : [],
       tasks: [],
       createdAt: now,
-      ownerId: currentUserId || undefined,
+      ownerId: currentUserId || null,
     }
     const nextProjects = [...projects, created]
     setProjects(nextProjects)
@@ -1721,6 +1735,7 @@ function App() {
                                       Status
                                     </p>
                                     <select
+                                      aria-label="Status"
                                       value={task.status}
                                       onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
                                       className="w-full rounded-xl border-2 border-slate-50 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
@@ -1848,10 +1863,11 @@ function App() {
             
             <form className="mt-10 space-y-6" onSubmit={handleCreateTask}>
               <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                  <label htmlFor="task-title" className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                     Task Title <span className="text-rose-500">*</span>
                   </label>
                 <input
+                  id="task-title"
                   required
                   name="task-title"
                   value={taskForm.title}
@@ -1863,10 +1879,11 @@ function App() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                    <label htmlFor="task-due" className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                       Due Date <span className="text-rose-500">*</span>
                     </label>
                   <input
+                    id="task-due"
                     required
                     type="datetime-local"
                     name="task-due"
