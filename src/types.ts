@@ -31,11 +31,11 @@ export interface Task {
 export interface Project {
   id: string
   name: string
-  course?: string
+  course: string | null
   members: string[]
   tasks: Task[]
   createdAt: string
-  ownerId?: string
+  ownerId: string | null
 }
 
 export interface User {
