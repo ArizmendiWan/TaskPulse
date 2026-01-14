@@ -228,7 +228,7 @@ function App() {
   // Cache projects to localStorage for the current user
   useEffect(() => {
     if (currentUserId && projects.length > 0) {
-      saveProjects(projects)
+    saveProjects(projects)
     }
   }, [projects, currentUserId])
 
@@ -357,8 +357,8 @@ function App() {
       if (updated) {
         setDoc(doc(db, 'projects', updated.id), updated).catch((err) =>
           console.error('Firebase sync error:', err),
-        )
-      }
+    )
+  }
       return next
     })
   }
@@ -562,7 +562,7 @@ function App() {
     if (!activeProject || !memberNameInput.trim() || !memberEmailInput.trim()) return
 
     try {
-      const trimmed = memberNameInput.trim()
+    const trimmed = memberNameInput.trim()
       const email = memberEmailInput.trim().toLowerCase()
       console.log('[join] submit', { projectId: activeProject.id, name: trimmed, email })
 
@@ -599,10 +599,10 @@ function App() {
       }
 
       console.log('[join] adding member to project', { projectId: activeProject.id, userId })
-      upsertProject((project) => ({
-        ...project,
+    upsertProject((project) => ({
+      ...project,
         members: ensureMemberList(project.members, userId),
-      }))
+    }))
 
       setMemberNameInput('')
       setMemberEmailInput('')
@@ -635,10 +635,10 @@ function App() {
         nextMembers = ensureMemberList(nextMembers, o)
       })
       return {
-        ...project,
+              ...project,
         members: nextMembers,
-        tasks: [...project.tasks, newTask],
-      }
+              tasks: [...project.tasks, newTask],
+            }
     })
 
     setTaskForm({
@@ -759,58 +759,58 @@ function App() {
   if (resolvedView === 'create') {
     return (
       <>
-        <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-          <div className="mx-auto max-w-xl px-4 py-12 space-y-8">
-            <header className="text-center space-y-2">
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+        <div className="mx-auto max-w-xl px-4 py-12 space-y-8">
+          <header className="text-center space-y-2">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">TaskPulse</p>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Create a Project</h1>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Create a Project</h1>
               <p className="text-sm font-medium text-slate-500">Set up your team in seconds. No accounts, no hassle.</p>
-            </header>
+          </header>
 
-            <section className="rounded-[2.5rem] bg-white p-8 shadow-xl shadow-slate-200 border border-slate-100">
-              <form className="space-y-6" onSubmit={handleCreateProject}>
-                <div className="space-y-1.5">
+          <section className="rounded-[2.5rem] bg-white p-8 shadow-xl shadow-slate-200 border border-slate-100">
+            <form className="space-y-6" onSubmit={handleCreateProject}>
+              <div className="space-y-1.5">
                   <label htmlFor="project-name" className="text-sm font-bold text-slate-700 ml-1">
-                    Project Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
+                  Project Name <span className="text-rose-500">*</span>
+                </label>
+                <input
                     id="project-name"
-                    required
-                    name="project-name"
-                    value={newProject.name}
-                    onChange={(e) => setNewProject((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
-                    placeholder="e.g. CS394 Final Project"
-                  />
-                </div>
-                <div className="space-y-1.5">
+                  required
+                  name="project-name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
+                  placeholder="e.g. CS394 Final Project"
+                />
+              </div>
+              <div className="space-y-1.5">
                   <label htmlFor="project-course" className="text-sm font-bold text-slate-700 ml-1">
-                    Course / Class <span className="text-slate-400 font-normal text-xs">(optional)</span>
-                  </label>
-                  <input
+                  Course / Class <span className="text-slate-400 font-normal text-xs">(optional)</span>
+                </label>
+                <input
                     id="project-course"
-                    name="project-course"
-                    value={newProject.course}
-                    onChange={(e) => setNewProject((p) => ({ ...p, course: e.target.value }))}
-                    className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
-                    placeholder="e.g. Agile Software Development"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  Create Project & Get Link
-                </button>
-              </form>
-            </section>
-
-            <div className="text-center">
+                  name="project-course"
+                  value={newProject.course}
+                  onChange={(e) => setNewProject((p) => ({ ...p, course: e.target.value }))}
+                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
+                  placeholder="e.g. Agile Software Development"
+                />
+              </div>
               <button
-                type="button"
-                onClick={goToOverview}
-                className="group inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                type="submit"
+                className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
               >
+                Create Project & Get Link
+              </button>
+            </form>
+          </section>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={goToOverview}
+              className="group inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -824,11 +824,11 @@ function App() {
                 >
                   <path d="m15 18-6-6 6-6" />
                 </svg>
-                Back to Overview
-              </button>
-            </div>
+              Back to Overview
+            </button>
           </div>
         </div>
+      </div>
 
         {deleteModal}
       </>
@@ -924,18 +924,18 @@ function App() {
   if (resolvedView === 'overview') {
     return (
       <>
-        <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-          <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
-            <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+        <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
+          <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-2">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">TaskPulse</p>
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight">
                   {currentUserName ? `${currentUserName}'s Projects` : 'Your Projects'}
                 </h1>
-                <p className="text-sm font-medium text-slate-500 max-w-md">
-                  A birds-eye view of all your group projects and their current status.
-                </p>
-              </div>
+              <p className="text-sm font-medium text-slate-500 max-w-md">
+                A birds-eye view of all your group projects and their current status.
+              </p>
+            </div>
               <div className="flex gap-3">
                 {currentUserId && (
                   <button
@@ -961,9 +961,9 @@ function App() {
                     Logout
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={goToCreate}
+            <button
+              type="button"
+              onClick={goToCreate}
                   disabled={!currentUserId}
                   className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 ${
                     currentUserId
@@ -971,7 +971,7 @@ function App() {
                       : 'bg-slate-300 shadow-slate-200 cursor-not-allowed'
                   }`}
                   title={currentUserId ? 'Create a new project' : 'Login to create projects'}
-                >
+            >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
@@ -986,14 +986,14 @@ function App() {
                     <path d="M5 12h14" />
                     <path d="M12 5v14" />
                   </svg>
-                  New Project
-                </button>
+              New Project
+            </button>
               </div>
-            </header>
+          </header>
 
             {currentUserId && userProjects.length === 0 ? (
-              <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-                <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+            <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="32"
@@ -1009,47 +1009,47 @@ function App() {
                     <path d="M3 9h18" />
                     <path d="M9 21V9" />
                   </svg>
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">No projects yet</h3>
-                <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
-                  Create your first project to start tracking tasks and coordinating with your team.
-                </p>
-                <button
-                  onClick={goToCreate}
-                  className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
-                >
-                  Get Started
-                </button>
-              </section>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">No projects yet</h3>
+              <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
+                Create your first project to start tracking tasks and coordinating with your team.
+              </p>
+              <button
+                onClick={goToCreate}
+                className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
+              >
+                Get Started
+              </button>
+            </section>
             ) : currentUserId && userProjects.length > 0 ? (
-              <section className="grid gap-6 md:grid-cols-2">
+            <section className="grid gap-6 md:grid-cols-2">
                 {userProjects.map((project) => {
-                  const stats = projectStats(project)
-                  return (
-                    <div
-                      key={project.id}
-                      className="group relative rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1 min-w-0">
+                const stats = projectStats(project)
+                return (
+                  <div
+                    key={project.id}
+                    className="group relative rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1 min-w-0">
                           <h2 className="text-xl font-black text-slate-900 truncate tracking-tight">
                             {project.name}
                           </h2>
-                          {project.course && (
-                            <p className="text-sm font-bold text-amber-600 truncate">{project.course}</p>
-                          )}
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                            {project.tasks.length} tasks · {project.members.length} members
-                          </p>
-                        </div>
+                        {project.course && (
+                          <p className="text-sm font-bold text-amber-600 truncate">{project.course}</p>
+                        )}
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+                          {project.tasks.length} tasks · {project.members.length} members
+                        </p>
+                      </div>
                         <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => goToProject(project.id)}
-                            className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
-                          >
-                            OPEN
-                          </button>
+                      <button
+                        type="button"
+                        onClick={() => goToProject(project.id)}
+                        className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
+                      >
+                        OPEN
+                      </button>
                           <button
                             type="button"
                             onClick={() => openDeleteProjectModal(project)}
@@ -1071,55 +1071,55 @@ function App() {
                               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                             </svg>
-                          </button>
+                      </button>
                         </div>
-                      </div>
+                    </div>
 
-                      <div className="mt-6 grid grid-cols-2 gap-3">
-                        <div className="rounded-2xl bg-slate-50 p-3 border border-slate-100">
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl bg-slate-50 p-3 border border-slate-100">
                           <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
                             Progress
                           </p>
-                          <div className="mt-1 flex items-baseline gap-1">
-                            <p className="text-lg font-black text-slate-900">{stats.percentDone}%</p>
-                            <p className="text-[10px] font-bold text-slate-400">DONE</p>
-                          </div>
-                          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 transition-all duration-500"
-                              style={{ width: `${stats.percentDone}%` }}
-                            />
-                          </div>
+                        <div className="mt-1 flex items-baseline gap-1">
+                          <p className="text-lg font-black text-slate-900">{stats.percentDone}%</p>
+                          <p className="text-[10px] font-bold text-slate-400">DONE</p>
                         </div>
-
-                        <div className="rounded-2xl bg-amber-50 p-3 border border-amber-100">
+                        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 transition-all duration-500" 
+                            style={{ width: `${stats.percentDone}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="rounded-2xl bg-amber-50 p-3 border border-amber-100">
                           <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">
                             Due Soon
                           </p>
-                          <p className="mt-1 text-lg font-black text-amber-900">{stats.dueSoon}</p>
-                          <p className="text-[10px] font-bold text-amber-700/60">NEXT 48H</p>
-                        </div>
+                        <p className="mt-1 text-lg font-black text-amber-900">{stats.dueSoon}</p>
+                        <p className="text-[10px] font-bold text-amber-700/60">NEXT 48H</p>
+                      </div>
 
-                        <div className="rounded-2xl bg-rose-50 p-3 border border-rose-100">
+                      <div className="rounded-2xl bg-rose-50 p-3 border border-rose-100">
                           <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">
                             At Risk
                           </p>
-                          <p className="mt-1 text-lg font-black text-rose-900">{stats.atRisk}</p>
-                          <p className="text-[10px] font-bold text-rose-700/60">NOT STARTED</p>
-                        </div>
+                        <p className="mt-1 text-lg font-black text-rose-900">{stats.atRisk}</p>
+                        <p className="text-[10px] font-bold text-rose-700/60">NOT STARTED</p>
+                      </div>
 
-                        <div className="rounded-2xl bg-rose-900 p-3">
+                      <div className="rounded-2xl bg-rose-900 p-3">
                           <p className="text-[10px] font-black uppercase tracking-wider text-rose-300">
                             Overdue
                           </p>
-                          <p className="mt-1 text-lg font-black text-white">{stats.overdue}</p>
-                          <p className="text-[10px] font-bold text-rose-400">CRITICAL</p>
-                        </div>
+                        <p className="mt-1 text-lg font-black text-white">{stats.overdue}</p>
+                        <p className="text-[10px] font-bold text-rose-400">CRITICAL</p>
                       </div>
                     </div>
-                  )
-                })}
-              </section>
+                  </div>
+                )
+              })}
+            </section>
             ) : !currentUserId ? (
               <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
@@ -1138,7 +1138,7 @@ function App() {
                     <path d="M3 9h18" />
                     <path d="M9 21V9" />
                   </svg>
-                </div>
+        </div>
                 <h3 className="text-xl font-bold text-slate-900">Create your first project</h3>
                 <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
                   Log in to create and manage your projects.
@@ -1151,7 +1151,7 @@ function App() {
                 </button>
               </section>
             ) : null}
-          </div>
+      </div>
         </div>
 
         {deleteModal}
@@ -1162,21 +1162,21 @@ function App() {
   // Project dashboard view (task-first, single project)
   return (
     <>
-      <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
-        {/* VS Code Style Sidebar / Narrow Strip */}
-        {activeProject && (
-          <aside
+    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
+      {/* VS Code Style Sidebar / Narrow Strip */}
+      {activeProject && (
+        <aside 
             className={`${
               showSidebar ? 'w-80' : 'w-16'
             } border-r border-slate-200 bg-white flex flex-col h-full shrink-0 z-20 shadow-xl shadow-slate-200/50 transition-all duration-300 ease-in-out relative`}
+        >
+          {/* Toggle Button - VS Code Style */}
+          <button
+            onClick={() => setShowSidebar(!showSidebar)}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm z-30 group"
           >
-            {/* Toggle Button - VS Code Style */}
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm z-30 group"
-            >
-              <svg
-                className={`transition-transform duration-300 ${showSidebar ? 'rotate-0' : 'rotate-180'}`}
+            <svg 
+              className={`transition-transform duration-300 ${showSidebar ? 'rotate-0' : 'rotate-180'}`} 
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
                 height="16"
@@ -1186,21 +1186,21 @@ function App() {
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-              >
+            >
                 <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
+            </svg>
+          </button>
 
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* Sidebar Header */}
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Sidebar Header */}
               <div
                 className={`p-6 border-b border-slate-100 flex flex-col transition-all duration-300 ${
                   showSidebar ? 'opacity-100' : 'opacity-0 scale-90'
                 }`}
               >
-                {showSidebar && (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
+              {showSidebar && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">
                         Project Info
                       </p>
@@ -1225,116 +1225,116 @@ function App() {
                           <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                         </svg>
                       </button>
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight truncate">
                         {activeProject.name}
                       </h3>
-                      {activeProject.course && (
-                        <p className="mt-1 text-sm font-bold text-amber-600 truncate">{activeProject.course}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 pt-4">
-                      <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tasks</p>
-                        <p className="text-lg font-black text-slate-900">{activeProject.tasks.length}</p>
-                      </div>
-                      <div className="h-8 w-px bg-slate-100" />
-                      <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team</p>
-                        <p className="text-lg font-black text-slate-900">{activeProject.members.length}</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Collapsed State Icon - Show when NOT showSidebar */}
-              {!showSidebar && (
-                <div className="flex flex-col items-center py-6 gap-6 transition-all duration-300">
-                  <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-amber-200">
-                    {activeProject.name.charAt(0).toUpperCase()}
+                    {activeProject.course && (
+                      <p className="mt-1 text-sm font-bold text-amber-600 truncate">{activeProject.course}</p>
+                    )}
                   </div>
-                  <div className="flex flex-col gap-4">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
-                      <p className="text-[8px] font-black text-slate-400 leading-none">{activeProject.tasks.length}</p>
-                      <p className="text-[6px] font-bold text-slate-400 uppercase">TKS</p>
+                  <div className="flex items-center gap-4 pt-4">
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tasks</p>
+                      <p className="text-lg font-black text-slate-900">{activeProject.tasks.length}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
+                    <div className="h-8 w-px bg-slate-100" />
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team</p>
+                      <p className="text-lg font-black text-slate-900">{activeProject.members.length}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Collapsed State Icon - Show when NOT showSidebar */}
+            {!showSidebar && (
+              <div className="flex flex-col items-center py-6 gap-6 transition-all duration-300">
+                <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-amber-200">
+                  {activeProject.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
+                    <p className="text-[8px] font-black text-slate-400 leading-none">{activeProject.tasks.length}</p>
+                    <p className="text-[6px] font-bold text-slate-400 uppercase">TKS</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
                       <p className="text-[8px] font-black text-slate-400 leading-none">
                         {activeProject.members.length}
                       </p>
-                      <p className="text-[6px] font-bold text-slate-400 uppercase">MEM</p>
-                    </div>
+                    <p className="text-[6px] font-bold text-slate-400 uppercase">MEM</p>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Sidebar Scrollable Content */}
+            {/* Sidebar Scrollable Content */}
               <div
                 className={`flex-1 overflow-y-auto p-6 space-y-8 transition-all duration-300 ${
                   showSidebar ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'
                 }`}
               >
-                {showSidebar && (
-                  <>
-                    {/* Teammates Section */}
-                    <div className="space-y-4">
+              {showSidebar && (
+                <>
+                  {/* Teammates Section */}
+                  <div className="space-y-4">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                         Teammates
                       </p>
-                      {memberList.length === 0 ? (
-                        <p className="text-sm italic text-slate-400 font-medium px-1">No one has joined yet.</p>
-                      ) : (
-                        <div className="space-y-2">
+                    {memberList.length === 0 ? (
+                      <p className="text-sm italic text-slate-400 font-medium px-1">No one has joined yet.</p>
+                    ) : (
+                      <div className="space-y-2">
                           {memberList.map((memberId) => {
                             const memberName = getUserName(memberId)
                             const isCurrentUser = memberId === currentUserId
                             return (
-                              <div
+                          <div
                                 key={memberId}
-                                className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
+                            className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
                                   isCurrentUser
-                                    ? 'bg-amber-50 border-amber-200 shadow-sm'
-                                    : 'bg-slate-50 border-transparent hover:border-slate-100'
-                                }`}
-                              >
+                                ? 'bg-amber-50 border-amber-200 shadow-sm'
+                                : 'bg-slate-50 border-transparent hover:border-slate-100'
+                            }`}
+                          >
                                 <div
                                   className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
                                     isCurrentUser ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
                                   }`}
                                 >
                                   {memberName.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-sm font-bold text-slate-700 truncate">
+                            </div>
+                            <span className="text-sm font-bold text-slate-700 truncate">
                                   {memberName} {isCurrentUser && '(You)'}
-                                </span>
-                              </div>
+                            </span>
+                          </div>
                             )
                           })}
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Dynamic Join/Profile Section */}
-                    <div className="pt-4 border-t border-slate-100">
+                  {/* Dynamic Join/Profile Section */}
+                  <div className="pt-4 border-t border-slate-100">
                       {!currentUserId ? (
-                        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 space-y-3">
-                          <div className="space-y-1">
+                      <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 space-y-3">
+                        <div className="space-y-1">
                             <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight">
                               Join the Team
                             </h4>
-                            <p className="text-[11px] font-bold text-amber-800/70">Enter your name to start.</p>
-                          </div>
-                          <form className="space-y-2" onSubmit={handleJoinProject}>
-                            <input
-                              required
-                              name="member-name"
-                              value={memberNameInput}
-                              onChange={(e) => setMemberNameInput(e.target.value)}
-                              className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
-                              placeholder="Your name"
-                            />
+                          <p className="text-[11px] font-bold text-amber-800/70">Enter your name to start.</p>
+                        </div>
+                        <form className="space-y-2" onSubmit={handleJoinProject}>
+                          <input
+                            required
+                            name="member-name"
+                            value={memberNameInput}
+                            onChange={(e) => setMemberNameInput(e.target.value)}
+                            className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
+                            placeholder="Your name"
+                          />
                             <input
                               required
                               id="member-email"
@@ -1343,52 +1343,52 @@ function App() {
                               onChange={(e) => setMemberEmailInput(e.target.value)}
                               className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
                               placeholder="Your email"
-                            />
-                            <button
-                              type="submit"
-                              className="w-full rounded-xl bg-amber-600 px-3 py-2 text-xs font-black text-white hover:bg-amber-500 shadow-lg shadow-amber-200/50 transition-all"
-                            >
-                              JOIN PROJECT
-                            </button>
-                          </form>
-                        </div>
-                      ) : (
-                        <div className="p-1">
+                          />
+                          <button
+                            type="submit"
+                            className="w-full rounded-xl bg-amber-600 px-3 py-2 text-xs font-black text-white hover:bg-amber-500 shadow-lg shadow-amber-200/50 transition-all"
+                          >
+                            JOIN PROJECT
+                          </button>
+                        </form>
+                      </div>
+                    ) : (
+                      <div className="p-1">
                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                             My Profile
                           </p>
-                          <div className="mt-3 flex items-center justify-between group">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        <div className="mt-3 flex items-center justify-between group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                               <span className="text-sm font-black text-slate-900 truncate">{currentUserName}</span>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setMemberNameInput('')
-                              }}
-                              className="text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"
-                            >
-                              Reset
-                            </button>
                           </div>
+                          <button
+                            onClick={() => {
+                              setMemberNameInput('')
+                            }}
+                            className="text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"
+                          >
+                            Reset
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
 
-              {/* Sidebar Footer */}
+            {/* Sidebar Footer */}
               <div
                 className={`p-6 bg-slate-50 border-t border-slate-100 transition-all duration-300 ${
                   showSidebar ? 'opacity-100' : 'opacity-0 translate-y-4 pointer-events-none'
                 }`}
               >
-                {showSidebar && (
-                  <button
-                    onClick={goToOverview}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border-2 border-slate-200 p-3 text-xs font-black text-slate-600 hover:border-slate-900 hover:text-slate-900 transition-all"
-                  >
+              {showSidebar && (
+                <button
+                  onClick={goToOverview}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border-2 border-slate-200 p-3 text-xs font-black text-slate-600 hover:border-slate-900 hover:text-slate-900 transition-all"
+                >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="14"
@@ -1402,19 +1402,19 @@ function App() {
                     >
                       <path d="m15 18-6-6 6-6" />
                     </svg>
-                    BACK TO PROJECTS
-                  </button>
-                )}
-              </div>
+                  BACK TO PROJECTS
+                </button>
+              )}
+            </div>
 
-              {/* Collapsed State Overview Button */}
-              {!showSidebar && (
-                <div className="p-3 mb-4 mt-auto flex flex-col items-center">
-                  <button
-                    onClick={goToOverview}
-                    className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg hover:bg-slate-800 transition-all"
-                    title="Back to Overview"
-                  >
+            {/* Collapsed State Overview Button */}
+            {!showSidebar && (
+              <div className="p-3 mb-4 mt-auto flex flex-col items-center">
+                <button
+                  onClick={goToOverview}
+                  className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg hover:bg-slate-800 transition-all"
+                  title="Back to Overview"
+                >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="18"
@@ -1428,44 +1428,44 @@ function App() {
                     >
                       <path d="m15 18-6-6 6-6" />
                     </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          </aside>
-        )}
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
 
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-          {/* Top Bar */}
-          {activeProject && (
-            <header className="h-20 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-12 shrink-0 z-10 shadow-sm">
-              <div className="flex items-center gap-4 md:gap-8 min-w-0">
-                <div className="min-w-0">
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+        {/* Top Bar */}
+        {activeProject && (
+          <header className="h-20 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-12 shrink-0 z-10 shadow-sm">
+            <div className="flex items-center gap-4 md:gap-8 min-w-0">
+              <div className="min-w-0">
                   <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">
                     Project
                   </p>
-                  <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md">
-                    {activeProject.name}
-                  </h1>
-                </div>
-
-                <div className="h-10 w-px bg-slate-100 hidden sm:block" />
-
-                <div className="flex flex-col gap-1 min-w-0">
+                <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md">
+                  {activeProject.name}
+                </h1>
+              </div>
+              
+              <div className="h-10 w-px bg-slate-100 hidden sm:block" />
+              
+              <div className="flex flex-col gap-1 min-w-0">
                   <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                     Invite Link
                   </p>
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <p className="hidden sm:block text-xs font-bold text-slate-600 truncate max-w-[100px] lg:max-w-[300px]">
-                      {projectShareLink(activeProject.id)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => copyLink(projectShareLink(activeProject.id))}
-                      className="p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all flex items-center gap-2"
-                      title="Copy Link"
-                    >
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <p className="hidden sm:block text-xs font-bold text-slate-600 truncate max-w-[100px] lg:max-w-[300px]">
+                    {projectShareLink(activeProject.id)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => copyLink(projectShareLink(activeProject.id))}
+                    className="p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all flex items-center gap-2"
+                    title="Copy Link"
+                  >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
@@ -1483,57 +1483,57 @@ function App() {
                       <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">
                         Copy Link
                       </span>
-                    </button>
-                  </div>
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTaskModal(true)}
+                className="rounded-xl bg-emerald-600 px-5 md:px-8 py-3 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+              >
+                <span className="hidden sm:inline">ADD TASK</span>
+                <span className="sm:hidden">+ TASK</span>
+              </button>
+            </div>
+          </header>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-4 pt-6 pb-12 md:px-12">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {!activeProject ? (
+              <section className="rounded-[3rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
+                <h3 className="text-2xl font-black text-slate-900">Project not found</h3>
+                <p className="mt-2 font-bold text-slate-400">The project link might be broken or expired.</p>
                 <button
-                  type="button"
-                  onClick={() => setShowTaskModal(true)}
-                  className="rounded-xl bg-emerald-600 px-5 md:px-8 py-3 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+                  onClick={goToOverview}
+                  className="mt-8 rounded-2xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
                 >
-                  <span className="hidden sm:inline">ADD TASK</span>
-                  <span className="sm:hidden">+ TASK</span>
+                  BACK TO OVERVIEW
                 </button>
-              </div>
-            </header>
-          )}
+              </section>
+            ) : (
+              <div className="space-y-6 pb-20">
+                <div className="flex flex-wrap items-center gap-2">
+                  {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setFilter(key)}
+                      className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
+                        filter === key
+                          ? 'bg-slate-900 text-white shadow-xl shadow-slate-200'
+                          : 'bg-white text-slate-500 hover:bg-slate-100 border-2 border-slate-100'
+                      }`}
+                    >
+                      {filterLabels[key].toUpperCase()}
+                    </button>
+                  ))}
+                </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-12 md:px-12">
-            <div className="max-w-4xl mx-auto space-y-6">
-              {!activeProject ? (
-                <section className="rounded-[3rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-                  <h3 className="text-2xl font-black text-slate-900">Project not found</h3>
-                  <p className="mt-2 font-bold text-slate-400">The project link might be broken or expired.</p>
-                  <button
-                    onClick={goToOverview}
-                    className="mt-8 rounded-2xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
-                  >
-                    BACK TO OVERVIEW
-                  </button>
-                </section>
-              ) : (
-                <div className="space-y-6 pb-20">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setFilter(key)}
-                        className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
-                          filter === key
-                            ? 'bg-slate-900 text-white shadow-xl shadow-slate-200'
-                            : 'bg-white text-slate-500 hover:bg-slate-100 border-2 border-slate-100'
-                        }`}
-                      >
-                        {filterLabels[key].toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="space-y-6">
+                  <div className="space-y-3">
                     {tasksForView.length === 0 ? (
                       <div className="py-20 text-center rounded-[3rem] border-4 border-dashed border-slate-100">
                         <p className="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">No tasks found</p>
@@ -1545,93 +1545,108 @@ function App() {
                       tasksForView.map((task) => {
                         const derived = deriveStatus(task)
                         const isRisk = isAtRisk(task)
-                        const soon = isDueSoon(task)
                         const overdue = isOverdue(task)
+                        const expanded = expandedTasks[task.id]
 
                         return (
                           <div
                             key={task.id}
-                            className={`group relative rounded-[2.5rem] border-2 transition-all duration-300 ${
+                            className={`group relative rounded-2xl border transition-all duration-300 ${
                               overdue
-                                ? 'border-rose-100 bg-rose-50/20'
+                                ? 'border-rose-100 bg-rose-50/10'
                                 : isRisk
-                                  ? 'border-amber-100 bg-amber-50/20'
-                                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/50'
-                            } p-6 md:p-8`}
+                                  ? 'border-amber-100 bg-amber-50/10'
+                                  : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
+                            }`}
                           >
-                            <div className="flex flex-col gap-6">
-                              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                                <div className="space-y-3 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span
-                                      className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${statusPills[derived]}`}
-                                    >
-                                      {statusLabels[derived]}
-                                    </span>
-                                    {soon && !overdue && (
-                                      <span className="rounded-lg bg-amber-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                                        DUE SOON
-                                      </span>
-                                    )}
-                                    {isRisk && (
-                                      <span className="rounded-lg bg-rose-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm animate-pulse">
-                                        AT RISK
-                                      </span>
-                                    )}
-                                    {task.difficulty && (
-                                      <span className="rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black text-white shadow-sm">
-                                        {task.difficulty}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <h4 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTasks((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
+                              className="w-full text-left p-4 md:p-5"
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="space-y-1 min-w-0">
+                                  <h4 className="text-base font-bold text-slate-900 truncate">
                                     {task.title}
                                   </h4>
-                                  {task.description && (
-                                    <p className="text-sm font-bold text-slate-500 line-clamp-2 leading-relaxed">
-                                      {task.description}
+                                  <div className="flex items-center gap-3">
+                                    <p className="text-[11px] font-medium text-slate-400">
+                                      Due {formatDue(task.dueAt)}
                                     </p>
-                                  )}
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${statusPills[derived]}`}
+                                      >
+                                        {statusLabels[derived]}
+                                      </span>
+                                      {isRisk && (
+                                        <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
+                                          <span className="w-1 h-1 bg-white rounded-full animate-ping" />
+                                          AT RISK
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
 
-                                <div className="shrink-0 flex flex-row md:flex-col items-center md:items-end gap-3">
-                                  {isRisk && (
-                                    <button
-                                      type="button"
-                                      onClick={() => copyNudge(task)}
-                                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all hover:-translate-y-1"
-                                    >
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="3"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
+                                <div className="shrink-0 flex items-center gap-4">
+                                  <div className="flex -space-x-2 overflow-hidden">
+                                    {task.owners.length === 0 ? (
+                                      <div className="h-7 w-7 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-[10px] text-slate-300 italic">
+                                        ?
+                                      </div>
+                                    ) : (
+                                      task.owners.slice(0, 3).map((ownerId) => (
+                                        <div
+                                          key={ownerId}
+                                          title={getUserName(ownerId)}
+                                          className="h-7 w-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase ring-1 ring-slate-100"
+                                        >
+                                          {getUserName(ownerId).charAt(0)}
+                                        </div>
+                                      ))
+                                    )}
+                                    {task.owners.length > 3 && (
+                                      <div className="h-7 w-7 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-black text-white">
+                                        +{task.owners.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    {isRisk && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          copyNudge(task)
+                                        }}
+                                        className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 transition-all flex items-center gap-1.5"
                                       >
-                                        <path d="m22 2-7 20-4-9-9-4Z" />
-                                        <path d="M22 2 11 13" />
-                                      </svg>
-                                      NUDGE
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setExpandedTasks((prev) => ({ ...prev, [task.id]: !prev[task.id] }))
-                                    }
-                                    className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all"
-                                  >
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="10"
+                                          height="10"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="3"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="m22 2-7 20-4-9-9-4Z" />
+                                          <path d="M22 2 11 13" />
+                                        </svg>
+                                        Nudge
+                                      </button>
+                                    )}
                                     <svg
-                                      className={`transition-transform duration-300 ${
-                                        expandedTasks[task.id] ? 'rotate-180' : ''
+                                      className={`transition-transform duration-300 text-slate-400 ${
+                                        expanded ? 'rotate-180' : ''
                                       }`}
                                       xmlns="http://www.w3.org/2000/svg"
-                                      width="20"
-                                      height="20"
+                                      width="14"
+                                      height="14"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -1641,185 +1656,146 @@ function App() {
                                     >
                                       <path d="m6 9 6 6 6-6" />
                                     </svg>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteTask(task)}
-                                    className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all"
-                                    title="Delete Task"
-                                  >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="3"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="M3 6h18" />
-                                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                    </svg>
-                                  </button>
+                                  </div>
                                 </div>
                               </div>
+                            </button>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
-                                <div className="space-y-2">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
-                                    Owners
-                                  </p>
-                                  <div className="flex flex-wrap gap-1.5 min-h-[42px] p-2 rounded-2xl border-2 border-slate-50 bg-slate-50">
-                                    {task.owners.length === 0 ? (
-                                      <span className="text-[10px] font-bold text-slate-400 p-1">Unassigned</span>
-                                    ) : (
-                                      task.owners.map((ownerId) => (
-                                        <span
-                                          key={ownerId}
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm"
-                                        >
-                                          {getUserName(ownerId)}
-                                          <button
-                                            onClick={() => handleOwnerChange(task, ownerId)}
-                                            className="text-slate-300 hover:text-rose-500 transition-colors"
+                            {expanded && (
+                              <div className="px-5 pb-6 pt-2 border-t border-slate-50 animate-in slide-in-from-top-2 duration-300">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                                  <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                                      Owners
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-xl border-2 border-slate-50 bg-slate-50">
+                                      {task.owners.length === 0 ? (
+                                        <span className="text-[10px] font-bold text-slate-400 px-1">Unassigned</span>
+                                      ) : (
+                                        task.owners.map((ownerId) => (
+                                          <span
+                                            key={ownerId}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm"
                                           >
-                                            ×
-                                          </button>
-                                        </span>
-                                      ))
-                                    )}
-                                    <select
-                                      value=""
-                                      onChange={(e) => handleOwnerChange(task, e.target.value)}
-                                      className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
-                                    >
-                                      <option value="">+ Add</option>
-                                      {[
-                                        ...new Set(
-                                          [...activeProject.members, ...(currentUserId ? [currentUserId] : [])].filter(
-                                            Boolean,
+                                            {getUserName(ownerId)}
+                                            <button
+                                              onClick={() => handleOwnerChange(task, ownerId)}
+                                              className="text-slate-300 hover:text-rose-500 transition-colors"
+                                            >
+                                              ×
+                                            </button>
+                                          </span>
+                                        ))
+                                      )}
+                                      <select
+                                        value=""
+                                        onChange={(e) => handleOwnerChange(task, e.target.value)}
+                                        className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
+                                      >
+                                        <option value="">+ Add</option>
+                                        {[
+                                          ...new Set(
+                                            [...activeProject.members, ...(currentUserId ? [currentUserId] : [])].filter(
+                                              Boolean,
+                                            ),
                                           ),
-                                        ),
-                                      ]
-                                        .filter((m) => !task.owners.includes(m))
-                                        .map((memberId) => (
-                                          <option key={memberId} value={memberId}>
-                                            {getUserName(memberId)}
-                                          </option>
-                                        ))}
+                                        ]
+                                          .filter((m) => !task.owners.includes(m))
+                                          .map((memberId) => (
+                                            <option key={memberId} value={memberId}>
+                                              {getUserName(memberId)}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                                      Status
+                                    </p>
+                                    <select
+                                      value={task.status}
+                                      onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
+                                      className="w-full rounded-xl border-2 border-slate-50 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                                    >
+                                      <option value="unassigned">Unassigned</option>
+                                      <option value="not_started">Not Started</option>
+                                      <option value="in_progress">In Progress</option>
+                                      <option value="done">Done</option>
                                     </select>
                                   </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
-                                    Status
-                                  </p>
-                                  <select
-                                    value={task.status}
-                                    onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
-                                    className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                  >
-                                    <option value="unassigned">Unassigned</option>
-                                    <option value="not_started">Not Started</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="done">Done</option>
-                                  </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
-                                    Due Date
-                                  </p>
-                                  <input
-                                    type="datetime-local"
-                                    value={task.dueAt}
-                                    onChange={(e) => handleDueChange(task, e.target.value)}
-                                    className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                  />
-                                </div>
-                              </div>
-
-                              {expandedTasks[task.id] && (
-                                <div className="mt-4 space-y-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 p-8 animate-in slide-in-from-top-4 duration-300">
-                                  <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
-                                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
-                                        Activity Log
-                                      </p>
-                                    </div>
-                                    <div className="space-y-4 pl-3 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                                      {task.activity.map((item) => (
-                                        <div key={item.id} className="relative pl-6">
-                                          <div className="absolute left-[-5px] top-1.5 h-2.5 w-2.5 rounded-full bg-white border-2 border-slate-300" />
-                                          <div className="space-y-1">
-                                            <div className="flex flex-wrap items-center gap-3">
-                                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 px-2 py-0.5 bg-slate-200 rounded-md">
-                                                {item.type.replace('_', ' ')}
-                                              </span>
-                                              <span className="text-[10px] font-black text-slate-400">
-                                                {formatDue(item.at).toUpperCase()}
-                                              </span>
-                                            </div>
-                                            <p className="text-sm font-bold text-slate-600">{item.note}</p>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
-                                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
-                                        Detailed Notes
-                                      </p>
-                                    </div>
-                                    <textarea
-                                      value={task.description}
-                                      onChange={(e) => handleDescriptionChange(task, e.target.value)}
-                                      className="w-full rounded-[2rem] border-2 border-white bg-white p-6 text-sm font-bold text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none shadow-sm"
-                                      placeholder="Add more details or updates for the team..."
-                                      rows={5}
+                                  <div className="space-y-2">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                                      Due Date
+                                    </p>
+                                    <input
+                                      type="datetime-local"
+                                      value={task.dueAt}
+                                      onChange={(e) => handleDueChange(task, e.target.value)}
+                                      className="w-full rounded-xl border-2 border-slate-50 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
                                     />
                                   </div>
                                 </div>
-                              )}
-                            </div>
+
+                                <div className="mt-6 space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
+                                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                        Notes
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTask(task)}
+                                      className="text-[10px] font-black text-rose-500 hover:text-rose-600 uppercase tracking-widest"
+                                    >
+                                      Delete Task
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    value={task.description}
+                                    onChange={(e) => handleDescriptionChange(task, e.target.value)}
+                                    className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 p-4 text-xs font-bold text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
+                                    placeholder="Add more details or updates for the team..."
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )
                       })
                     )}
                   </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </main>
+        </div>
+      </main>
 
-        {/* Task Creation Modal */}
-        {showTaskModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label="New task"
-              className="w-full max-w-xl rounded-[3rem] bg-white p-10 shadow-2xl transition-all animate-in fade-in zoom-in duration-300"
-            >
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600">TaskPulse</p>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tight">Add a Task</h3>
+      {/* Task Creation Modal */}
+      {showTaskModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="New task"
+            className="w-full max-w-xl rounded-[3rem] bg-white p-10 shadow-2xl transition-all animate-in fade-in zoom-in duration-300"
+          >
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600">TaskPulse</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Add a Task</h3>
                   <p className="text-sm font-bold text-slate-500">Keep it clear so the team knows what to do.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTaskModal(false)}
-                  className="rounded-full bg-slate-50 p-3 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
-                >
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTaskModal(false)}
+                className="rounded-full bg-slate-50 p-3 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
+              >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -1834,57 +1810,57 @@ function App() {
                     <path d="M18 6 6 18" />
                     <path d="m6 6 12 12" />
                   </svg>
-                </button>
-              </div>
-
-              <form className="mt-10 space-y-6" onSubmit={handleCreateTask}>
-                <div className="space-y-2">
+              </button>
+            </div>
+            
+            <form className="mt-10 space-y-6" onSubmit={handleCreateTask}>
+              <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                     Task Title <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    required
-                    name="task-title"
-                    value={taskForm.title}
-                    onChange={(e) => setTaskForm((t) => ({ ...t, title: e.target.value }))}
-                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                    placeholder="e.g. Write report introduction"
-                  />
-                </div>
+                <input
+                  required
+                  name="task-title"
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm((t) => ({ ...t, title: e.target.value }))}
+                  className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                  placeholder="e.g. Write report introduction"
+                />
+              </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
                     <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                       Due Date <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      required
-                      type="datetime-local"
-                      name="task-due"
-                      value={taskForm.dueAt}
-                      onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
-                      className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-[13px] font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
+                  <input
+                    required
+                    type="datetime-local"
+                    name="task-due"
+                    value={taskForm.dueAt}
+                    onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
+                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-[13px] font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
                     <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                       Difficulty
                     </label>
-                    <select
-                      name="task-difficulty"
-                      value={taskForm.difficulty}
-                      onChange={(e) => setTaskForm((t) => ({ ...t, difficulty: e.target.value }))}
-                      className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                    >
-                      <option value="">Select...</option>
-                      <option value="S">S (Tiny)</option>
-                      <option value="M">M (Medium)</option>
-                      <option value="L">L (Big)</option>
-                    </select>
-                  </div>
+                  <select
+                    name="task-difficulty"
+                    value={taskForm.difficulty}
+                    onChange={(e) => setTaskForm((t) => ({ ...t, difficulty: e.target.value }))}
+                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                  >
+                    <option value="">Select...</option>
+                    <option value="S">S (Tiny)</option>
+                    <option value="M">M (Medium)</option>
+                    <option value="L">L (Big)</option>
+                  </select>
                 </div>
+              </div>
 
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                     Owners
                   </label>
@@ -1913,42 +1889,42 @@ function App() {
                       ),
                     )}
                   </div>
-                </div>
+              </div>
 
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                     Description
                   </label>
-                  <textarea
-                    name="task-description"
-                    value={taskForm.description}
-                    onChange={(e) => setTaskForm((t) => ({ ...t, description: e.target.value }))}
-                    rows={3}
-                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
-                    placeholder="Add some details..."
-                  />
-                </div>
+                <textarea
+                  name="task-description"
+                  value={taskForm.description}
+                  onChange={(e) => setTaskForm((t) => ({ ...t, description: e.target.value }))}
+                  rows={3}
+                  className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
+                  placeholder="Add some details..."
+                />
+              </div>
 
-                <div className="flex gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowTaskModal(false)}
-                    className="flex-1 rounded-[1.5rem] border-2 border-slate-100 px-6 py-4 text-sm font-black text-slate-500 hover:bg-slate-50 transition-colors"
-                  >
-                    CANCEL
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-[1.5] rounded-[1.5rem] bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 transition-all"
-                  >
-                    CREATE TASK
-                  </button>
-                </div>
-              </form>
-            </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowTaskModal(false)}
+                  className="flex-1 rounded-[1.5rem] border-2 border-slate-100 px-6 py-4 text-sm font-black text-slate-500 hover:bg-slate-50 transition-colors"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[1.5] rounded-[1.5rem] bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 transition-all"
+                >
+                  CREATE TASK
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       {deleteModal}
     </>
