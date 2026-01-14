@@ -4,6 +4,7 @@ import { loadMemberName, saveProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus, User } from './types'
 import { db } from './lib/firebase'
 import { saveUser, getUserByEmail, getUserProjects, getUserById } from './lib/userUtils'
+import { sendNudgeEmails } from './utilities/emailService'
 import { doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import {
   deriveStatus,
@@ -737,8 +738,22 @@ function App() {
   }
 
   function copyNudge(task: Task) {
-    const message = `Hey — “${task.title}” is due ${formatDue(task.dueAt)}. Can you start it or update the status?`
+    const formattedDue = formatDue(task.dueAt)
+    const message = `Hey — “${task.title}” is due ${formattedDue}. Can you start it or update the status?`
     navigator.clipboard?.writeText(message).catch(() => {})
+
+    const recipientEmails = task.owners
+      .map((ownerId) => userCache[ownerId]?.email)
+      .filter((email): email is string => Boolean(email))
+
+    if (recipientEmails.length === 0) return
+
+    sendNudgeEmails({
+      taskTitle: task.title,
+      dueAt: formattedDue,
+      recipientEmails,
+      senderName: currentUserName || 'Teammate',
+    }).catch(() => {})
   }
 
   if (resolvedView === 'create') {
