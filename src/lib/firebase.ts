@@ -2,14 +2,14 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBqgLXxxVhE7NeQMZdQB0TOl8tdqCUZ1uQ",
-  authDomain: "taskpulse-9ce68.firebaseapp.com",
-  databaseURL: "https://taskpulse-9ce68-default-rtdb.firebaseio.com",
-  projectId: "taskpulse-9ce68",
-  storageBucket: "taskpulse-9ce68.firebasestorage.app",
-  messagingSenderId: "133287375648",
-  appId: "1:133287375648:web:9f8d3ad0eb9059b9ffdd45",
-  measurementId: "G-Y71PXGEFW6"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig)
