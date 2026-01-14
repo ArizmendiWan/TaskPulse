@@ -1,4 +1,4 @@
-import type { Project } from './types'
+import type { Project, User } from './types'
 
 const PROJECTS_KEY = 'taskpulse.projects.v1'
 const MEMBER_KEY_PREFIX = 'taskpulse.member.'
@@ -25,17 +25,21 @@ export function saveProjects(projects: Project[]) {
   }
 }
 
-export function loadMemberName(projectId: string | null): string {
-  if (!projectId || typeof localStorage === 'undefined') return ''
-  return localStorage.getItem(`${MEMBER_KEY_PREFIX}${projectId}`) ?? ''
-}
-
-export function saveMemberName(projectId: string | null, name: string) {
-  if (!projectId || typeof localStorage === 'undefined') return
+export function clearProjects() {
+  if (typeof localStorage === 'undefined') return
   try {
-    localStorage.setItem(`${MEMBER_KEY_PREFIX}${projectId}`, name)
+    localStorage.removeItem(PROJECTS_KEY)
   } catch (err) {
-    console.warn('Failed to save member name', err)
+    console.warn('Failed to clear projects', err)
   }
 }
 
+export function loadMemberName(projectId: string | null): string {
+  // Member names are managed in component state
+  return ''
+}
+
+export function saveMemberName(projectId: string | null, name: string) {
+  // Member names are managed in component state
+  return
+}

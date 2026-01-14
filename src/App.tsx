@@ -1,9 +1,8 @@
-import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { loadMemberName, loadProjects, saveMemberName, saveProjects } from './storage'
+import { loadMemberName, loadProjects, saveProjects, clearProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus, User } from './types'
 import { db } from './lib/firebase'
-import { saveUser } from './lib/userUtils'
+import { saveUser, getUserByEmail, getUserProjects, getUserById } from './lib/userUtils'
 import { doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import {
   deriveStatus,
@@ -57,11 +56,10 @@ function projectShareLink(projectId: string) {
   return url.toString()
 }
 
-function ensureMemberList(members: string[], name: string) {
-  const trimmed = name.trim()
-  if (!trimmed) return members
-  if (members.includes(trimmed)) return members
-  return [...members, trimmed]
+function ensureMemberList(members: string[], userId: string) {
+  if (!userId) return members
+  if (members.includes(userId)) return members
+  return [...members, userId]
 }
 
 function createActivity(type: ActivityItem['type'], note?: string): ActivityItem {
@@ -93,18 +91,24 @@ function App() {
         ? 'project'
         : 'overview'
 
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects())
+  const [projects, setProjects] = useState<Project[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     initialProjectId,
   )
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [memberNameInput, setMemberNameInput] = useState('')
-  const [currentMember, setCurrentMember] = useState<string>(() =>
-    loadMemberName(initialProjectId),
-  )
+  const [memberEmailInput, setMemberEmailInput] = useState('')
+  const [currentMember, setCurrentMember] = useState<string>('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null)
+
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
+
+  const [userCache, setUserCache] = useState<Record<string, User>>({})
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
   const [loginForm, setLoginForm] = useState({ name: '', email: '' })
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [taskForm, setTaskForm] = useState<{
     title: string
     description: string
@@ -130,14 +134,28 @@ function App() {
   const memberList = useMemo(
     () =>
       activeProject
-        ? Array.from(new Set(activeProject.members.filter((m) => m && m.trim())))
+        ? Array.from(new Set(activeProject.members.filter(Boolean)))
         : [],
     [activeProject],
   )
 
+  // console.log('memberList', memberList)
+  const userProjects = useMemo(
+    () =>
+      currentUserId
+        ? projects.filter((p) => p.ownerId === currentUserId || p.members.includes(currentUserId))
+        : [],
+    [projects, currentUserId],
+  )
+
+  // Projects are synced to Firebase automatically via upsertProject()
+
+  // Cache projects to localStorage for the current user
   useEffect(() => {
-    saveProjects(projects)
-  }, [projects])
+    if (currentUserId && projects.length > 0) {
+      saveProjects(projects)
+    }
+  }, [projects, currentUserId])
 
   // Firebase Real-time Sync
   useEffect(() => {
@@ -189,16 +207,30 @@ function App() {
     setMemberNameInput(storedName)
   }, [activeProjectId])
 
+  // Member names managed in component state, synced to Firebase via project updates
+
+  // Load user projects when logged in
   useEffect(() => {
-    if (activeProjectId) saveMemberName(activeProjectId, currentMember)
-  }, [activeProjectId, currentMember])
+    if (!currentUserId) return
+    
+    const loadProjects = async () => {
+      try {
+        const projects = await getUserProjects(currentUserId)
+        setProjects(projects)
+      } catch (err) {
+        console.error('Failed to load user projects:', err)
+      }
+    }
+    
+    loadProjects()
+  }, [currentUserId])
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
     const base = sortByDue(activeProject.tasks)
     switch (filter) {
       case 'mine':
-        return filterMyTasks(base, currentMember || null)
+        return filterMyTasks(base, currentUserId || null)
       case 'dueSoon':
         return filterDueSoon(base)
       case 'atRisk':
@@ -208,7 +240,49 @@ function App() {
       default:
         return base
     }
-  }, [activeProject, filter, currentMember])
+  }, [activeProject, filter, currentUserId])
+
+  // Helper to get user name from cache or ID
+  const getUserName = (userId: string | null): string => {
+    if (!userId) return 'Unknown'
+    return userCache[userId]?.name || userId
+  }
+
+  // console.log('userCache', userCache)
+
+  // Fetch user details for members and owners
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      const usersToFetch = new Set<string>()
+      
+      // Collect all user IDs from projects and tasks
+      projects.forEach((project) => {
+        project.members.forEach((memberId) => usersToFetch.add(memberId))
+        project.tasks.forEach((task) => {
+          task.owners.forEach((ownerId) => usersToFetch.add(ownerId))
+        })
+      })
+
+      // Fetch missing users
+      for (const userId of usersToFetch) {
+        if (!userCache[userId]) {
+          try {
+            // console.log('Fetching user details for:', userId)
+            const user = await getUserById(userId)
+            if (user) {
+              setUserCache((prev) => ({ ...prev, [userId]: user }))
+            }
+          } catch (err) {
+            console.error('Failed to fetch user:', userId, err)
+          }
+        }
+      }
+    }
+
+    if (projects.length > 0) {
+      fetchUserDetails()
+    }
+  }, [projects])
 
   function upsertProject(mapper: (project: Project) => Project) {
     setProjects((prev) => {
@@ -223,7 +297,23 @@ function App() {
     })
   }
 
-  function goToOverview() {
+  async function goToOverview() {
+    
+    
+    // Reload user projects when going to overview
+    if (currentUserId) {
+      try {
+        const userProjects = await getUserProjects(currentUserId)
+        setProjects(userProjects)
+
+        if (userProjects.length === 0) {
+          console.log('No projects found for user:', currentUserId)
+        }
+      } catch (err) {
+        console.error('Failed to load user projects:', err)
+      }
+    }
+
     setView('overview')
     setActiveProjectId(null)
     const url = new URL(window.location.origin + '/')
@@ -231,38 +321,82 @@ function App() {
   }
 
   function goToCreate() {
+    if (!currentUserId) {
+      setView('login')
+      return
+    }
     setView('create')
     setActiveProjectId(null)
     const url = new URL(window.location.origin + '/new')
     window.history.replaceState({}, '', url.toString())
   }
 
-  function goToLogin() {
-    setView('login')
-  }
 
-  function handleLogin(e: React.FormEvent) {
+
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     if (!loginForm.name.trim() || !loginForm.email.trim()) return
     
-    const userId = uuid()
-    const now = new Date().toISOString()
-    const user: User = {
-      id: userId,
-      name: loginForm.name.trim(),
-      email: loginForm.email.trim(),
-      createdAt: now,
-      updatedAt: now,
+    try {
+      setLoginError(null)
+      // Check if user exists
+      const existingUser = await getUserByEmail(loginForm.email.trim())
+      
+      if (existingUser) {
+        // User exists, check if name matches
+        if (existingUser.name !== loginForm.name.trim()) {
+          setLoginError(`Name does not match the existing user with this email.`)
+          return
+        }
+        
+        // User exists and name matches, log them in
+        console.log('User already exists, logging in:', existingUser.id)
+        setCurrentUserId(existingUser.id)
+        setCurrentUserName(existingUser.name)
+        setCurrentUserEmail(existingUser.email)
+        
+        // Fetch all projects for this user
+        const userProjects = await getUserProjects(existingUser.id)
+        setProjects(userProjects)
+        
+        setLoginForm({ name: '', email: '' })
+        goToOverview()
+      } else {
+        // User doesn't exist, create new user
+        const userId = uuid()
+        const now = new Date().toISOString()
+        const newUser: User = {
+          id: userId,
+          name: loginForm.name.trim(),
+          email: loginForm.email.trim(),
+          createdAt: now,
+          updatedAt: now,
+        }
+        
+        // Store new user in Firestore
+        await saveUser(newUser)
+        
+        console.log('New user created:', userId)
+        setCurrentUserId(userId)
+        setCurrentUserName(loginForm.name.trim())
+        setCurrentUserEmail(loginForm.email.trim())
+        
+        setLoginForm({ name: '', email: '' })
+        goToOverview()
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      setLoginError('An error occurred during login. Please try again.')
     }
-    
-    // Store user in Firestore
-    saveUser(user).catch((err) =>
-      console.error('Firebase user save error:', err),
-    )
-    
-    setCurrentMember(loginForm.name.trim())
-    saveMemberName(null, loginForm.name.trim())
-    setLoginForm({ name: '', email: '' })
+  }
+
+  function handleLogout() {
+    setCurrentUserId(null)
+    setCurrentUserName(null)
+    setCurrentUserEmail(null)
+    setActiveProjectId(null)
+    setProjects([])
+    clearProjects()
     goToOverview()
   }
 
@@ -284,42 +418,107 @@ function App() {
       id,
       name: newProject.name.trim(),
       course: newProject.course.trim() || undefined,
-      members: [],
+      members: currentUserId ? [currentUserId] : [],
       tasks: [],
       createdAt: now,
+      ownerId: currentUserId || undefined,
     }
     const nextProjects = [...projects, created]
     setProjects(nextProjects)
     setDoc(doc(db, 'projects', created.id), created).catch((err) =>
       console.error('Firebase create error:', err),
     )
-    setCurrentMember('')
-    setMemberNameInput('')
     setNewProject({ name: '', course: '' })
     goToProject(id)
   }
 
   function handleDeleteProject(id: string, name: string) {
-    if (window.confirm(`Are you sure you want to delete the project "${name}"? This action cannot be undone.`)) {
-      setProjects((prev) => prev.filter((p) => p.id !== id))
-      deleteDoc(doc(db, 'projects', id)).catch((err) =>
-        console.error('Firebase delete project error:', err),
-      )
+    const project = projects.find((p) => p.id === id)
+    if (!project) return
+
+    const isOwner = project.ownerId === currentUserId
+    const confirmMessage = isOwner
+      ? `Are you sure you want to delete the project "${name}"? This action cannot be undone.`
+      : `Are you sure you want to leave the project "${name}"? You can rejoin later if invited.`
+    const actionLabel = isOwner ? 'delete' : 'leave'
+
+    if (window.confirm(confirmMessage)) {
+      if (isOwner) {
+        // Owner: delete project completely
+        setProjects((prev) => prev.filter((p) => p.id !== id))
+        deleteDoc(doc(db, 'projects', id)).catch((err) =>
+          console.error('Firebase delete project error:', err),
+        )
+      } else {
+        // Member: remove self from project
+        upsertProject((p) => ({
+          ...p,
+          members: p.members.filter((m) => m !== currentUserId),
+        }))
+      }
+
       if (activeProjectId === id) {
         goToOverview()
       }
     }
   }
 
-  function handleJoinProject(e: React.FormEvent) {
+  async function handleJoinProject(e: React.FormEvent) {
     e.preventDefault()
-    if (!activeProject || !memberNameInput.trim()) return
-    const trimmed = memberNameInput.trim()
-    setCurrentMember(trimmed)
-    upsertProject((project) => ({
-      ...project,
-      members: ensureMemberList(project.members, trimmed),
-    }))
+    if (!activeProject || !memberNameInput.trim() || !memberEmailInput.trim()) return
+    
+    try {
+      const trimmed = memberNameInput.trim()
+      const email = memberEmailInput.trim().toLowerCase()
+      
+      // Check if user exists by email
+      const existingUser = await getUserByEmail(email)
+      let userId: string
+      
+      if (existingUser) {
+        // User exists - verify name matches
+        if (existingUser.name !== trimmed) {
+          // Name mismatch - let them use their registered name
+          setCurrentUserName(existingUser.name)
+        } else {
+          setCurrentUserName(trimmed)
+        }
+        // Save session for existing user
+        setCurrentUserId(existingUser.id)
+        setCurrentUserEmail(existingUser.email)
+        userId = existingUser.id
+      } else {
+        // User doesn't exist - create new user
+        const newUser: User = {
+          id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: trimmed,
+          email: email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        await saveUser(newUser)
+        // Save session for new user
+        setCurrentUserId(newUser.id)
+        setCurrentUserName(newUser.name)
+        setCurrentUserEmail(newUser.email)
+        userId = newUser.id
+      }
+      
+      // Add to project members
+      upsertProject((project) => ({
+        ...project,
+        members: ensureMemberList(project.members, userId),
+      }))
+      
+      // Clear form
+      setMemberNameInput('')
+      setMemberEmailInput('')
+      
+      // Note: Project stays visible because it's already in local state
+      // Firebase real-time sync will keep it updated
+    } catch (error) {
+      console.error('Error joining project:', error)
+    }
   }
 
   function handleCreateTask(e: React.FormEvent) {
@@ -332,13 +531,13 @@ function App() {
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
-      owners: taskForm.owners.map((o) => o.trim()),
+      owners: taskForm.owners,
       difficulty: (taskForm.difficulty as Task['difficulty']) || '',
       status,
       activity: [
         createActivity(
           'created',
-          `Created by ${currentMember || 'teammate'}`.trim(),
+          `Created by ${currentUserName || 'teammate'}`.trim(),
         ),
       ],
       createdAt: now,
@@ -398,12 +597,12 @@ function App() {
     }))
   }
 
-  function handleOwnerChange(task: Task, ownerName: string) {
-    if (!ownerName) return
-    const isAlreadyOwner = task.owners.includes(ownerName)
+  function handleOwnerChange(task: Task, ownerId: string) {
+    if (!ownerId) return
+    const isAlreadyOwner = task.owners.includes(ownerId)
     const nextOwners = isAlreadyOwner
-      ? task.owners.filter((o) => o !== ownerName)
-      : [...task.owners, ownerName]
+      ? task.owners.filter((o) => o !== ownerId)
+      : [...task.owners, ownerId]
 
     updateTask(task.id, (t) => ({
       ...t,
@@ -414,8 +613,8 @@ function App() {
         createActivity(
           'owner_changed',
           isAlreadyOwner
-            ? `Removed owner: ${ownerName}`
-            : `Added owner: ${ownerName}`,
+            ? `Removed owner: ${getUserName(ownerId)}`
+            : `Added owner: ${getUserName(ownerId)}`,
         ),
       ],
       updatedAt: new Date().toISOString(),
@@ -424,7 +623,7 @@ function App() {
     if (activeProject && !isAlreadyOwner) {
       upsertProject((project) => ({
         ...project,
-        members: ensureMemberList(project.members, ownerName),
+        members: ensureMemberList(project.members, ownerId),
       }))
     }
   }
@@ -576,6 +775,11 @@ function App() {
                   placeholder="e.g. john@example.com"
                 />
               </div>
+              {loginError && (
+                <div className="rounded-2xl bg-rose-50 border border-rose-200 p-4">
+                  <p className="text-sm font-bold text-rose-700">{loginError}</p>
+                </div>
+              )}
               <button
                 type="submit"
                 className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
@@ -608,26 +812,35 @@ function App() {
             <div className="space-y-2">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">
                 TaskPulse
-                </p>
-              {/* TODO: change the "Project" to "{name} projects" */}
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Projects</h1>
+              </p>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+                {currentUserName ? `${currentUserName}'s Projects` : 'Your Projects'}
+              </h1>
               <p className="text-sm font-medium text-slate-500 max-w-md">
                 A birds-eye view of all your group projects and their current status.
               </p>
             </div>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={goToLogin}
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-orange-200 transition-all hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Login
-              </button>
+              {currentUserId && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-rose-200 transition-all hover:bg-rose-700 hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Logout
+                </button>
+              )}
               <button
                 type="button"
                 onClick={goToCreate}
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-500 hover:-translate-y-0.5 active:translate-y-0"
+                disabled={!currentUserId}
+                className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 ${
+                  currentUserId
+                    ? 'bg-amber-600 shadow-amber-200 hover:bg-amber-500'
+                    : 'bg-slate-300 shadow-slate-200 cursor-not-allowed'
+                }`}
+                title={currentUserId ? 'Create a new project' : 'Login to create projects'}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 New Project
@@ -635,12 +848,16 @@ function App() {
             </div>
           </header>
 
-          {projects.length === 0 ? (
-            <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">No projects yet</h3>
+            {currentUserId && userProjects.length === 0 ? (
+              
+
+              <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
+                <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                </div>
+              <h3 className="text-xl font-bold text-slate-900">
+                No projects yet
+              </h3>
               <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
                 Create your first project to start tracking tasks and coordinating with your team.
               </p>
@@ -651,9 +868,9 @@ function App() {
                 Get Started
               </button>
             </section>
-          ) : (
+          ) : currentUserId && userProjects.length > 0 ? (
             <section className="grid gap-6 md:grid-cols-2">
-              {projects.map((project) => {
+              {userProjects.map((project) => {
                 const stats = projectStats(project)
                 return (
                   <div
@@ -726,7 +943,25 @@ function App() {
                 )
               })}
             </section>
-          )}
+          ) : !currentUserId ? (
+            <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">
+                Create your first project
+              </h3>
+              <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
+                Log in to create and manage your projects.
+              </p>
+              <button
+                onClick={goToCreate}
+                className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
+              >
+                Login to Create Projects
+              </button>
+            </section>
+          ) : null}
         </div>
       </div>
     )
@@ -819,32 +1054,36 @@ function App() {
                       <p className="text-sm italic text-slate-400 font-medium px-1">No one has joined yet.</p>
                     ) : (
                       <div className="space-y-2">
-                        {memberList.map((member) => (
-                          <div
-                            key={member}
-                            className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
-                              member === currentMember
-                                ? 'bg-amber-50 border-amber-200 shadow-sm'
-                                : 'bg-slate-50 border-transparent hover:border-slate-100'
-                            }`}
-                          >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
-                              member === currentMember ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
-                            }`}>
-                              {member.charAt(0).toUpperCase()}
+                        {memberList.map((memberId) => {
+                          const memberName = getUserName(memberId)
+                          const isCurrentUser = memberId === currentUserId
+                          return (
+                            <div
+                              key={memberId}
+                              className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
+                                isCurrentUser
+                                  ? 'bg-amber-50 border-amber-200 shadow-sm'
+                                  : 'bg-slate-50 border-transparent hover:border-slate-100'
+                              }`}
+                            >
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
+                                isCurrentUser ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
+                              }`}>
+                                {memberName.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm font-bold text-slate-700 truncate">
+                                {memberName} {isCurrentUser && '(You)'}
+                              </span>
                             </div>
-                            <span className="text-sm font-bold text-slate-700 truncate">
-                              {member} {member === currentMember && '(You)'}
-                            </span>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
 
                   {/* Dynamic Join/Profile Section */}
                   <div className="pt-4 border-t border-slate-100">
-                    {!currentMember ? (
+                    {!currentUserId ? (
                       <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 space-y-3">
                         <div className="space-y-1">
                           <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight">Join the Team</h4>
@@ -858,6 +1097,15 @@ function App() {
                             onChange={(e) => setMemberNameInput(e.target.value)}
                             className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
                             placeholder="Your name"
+                          />
+                          <input 
+                            required
+                            id="member-email"
+                            type="email"
+                            value={memberEmailInput}
+                            onChange={(e) => setMemberEmailInput(e.target.value)}
+                            className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
+                            placeholder="Your email"
                           />
                           <button
                             type="submit"
@@ -873,7 +1121,7 @@ function App() {
                         <div className="mt-3 flex items-center justify-between group">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                            <span className="text-sm font-black text-slate-900 truncate">{currentMember}</span>
+                            <span className="text-sm font-black text-slate-900 truncate">{currentUserName}</span>
                           </div>
                           <button
                             onClick={() => {
@@ -1093,14 +1341,14 @@ function App() {
                                   {task.owners.length === 0 ? (
                                     <span className="text-[10px] font-bold text-slate-400 p-1">Unassigned</span>
                                   ) : (
-                                    task.owners.map((owner) => (
+                                    task.owners.map((ownerId) => (
                                       <span 
-                                        key={owner}
+                                        key={ownerId}
                                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm"
                                       >
-                                        {owner}
+                                        {getUserName(ownerId)}
                                         <button 
-                                          onClick={() => handleOwnerChange(task, owner)}
+                                          onClick={() => handleOwnerChange(task, ownerId)}
                                           className="text-slate-300 hover:text-rose-500 transition-colors"
                                         >
                                           ×
@@ -1114,10 +1362,10 @@ function App() {
                                     className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
                                   >
                                     <option value="">+ Add</option>
-                                    {[...new Set([...activeProject.members, currentMember].filter(Boolean))].filter(m => !task.owners.includes(m)).map(
-                                      (member) => (
-                                        <option key={member} value={member}>
-                                          {member}
+                                    {[...new Set([...activeProject.members, ...(currentUserId ? [currentUserId] : [])].filter(Boolean))].filter(m => !task.owners.includes(m)).map(
+                                      (memberId) => (
+                                        <option key={memberId} value={memberId}>
+                                          {getUserName(memberId)}
                                         </option>
                                       ),
                                     )}
@@ -1277,41 +1525,27 @@ function App() {
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owners</label>
                 <div className="flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 border-slate-50 bg-slate-50">
-                  {[...new Set([...(activeProject?.members || []), currentMember].filter(Boolean))].map((member) => (
+                  {[...new Set([...(activeProject?.members || []), ...(currentUserId ? [currentUserId] : [])].filter(Boolean))].map((memberId) => (
                     <button
-                      key={member}
+                      key={memberId}
                       type="button"
                       onClick={() => {
                         setTaskForm((t) => ({
                           ...t,
-                          owners: t.owners.includes(member)
-                            ? t.owners.filter((o) => o !== member)
-                            : [...t.owners, member],
+                          owners: t.owners.includes(memberId)
+                            ? t.owners.filter((o) => o !== memberId)
+                            : [...t.owners, memberId],
                         }))
                       }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                        taskForm.owners.includes(member)
+                        taskForm.owners.includes(memberId)
                           ? 'bg-amber-500 text-white shadow-md'
                           : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
-                      {member}
+                      {getUserName(memberId)}
                     </button>
                   ))}
-                  <input
-                    className="bg-transparent border-none focus:outline-none text-xs font-black w-24 ml-2"
-                    placeholder="+ Add Name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        const val = e.currentTarget.value.trim()
-                        if (val && !taskForm.owners.includes(val)) {
-                          setTaskForm((t) => ({ ...t, owners: [...t.owners, val] }))
-                          e.currentTarget.value = ''
-                        }
-                      }
-                    }}
-                  />
                 </div>
               </div>
 

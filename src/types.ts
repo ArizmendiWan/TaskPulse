@@ -35,7 +35,7 @@ export interface Project {
   members: string[]
   tasks: Task[]
   createdAt: string
-  userId?: string
+  ownerId?: string
 }
 
 export interface User {
