@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loadMemberName, loadProjects, saveProjects, clearProjects } from './storage'
+import type React from 'react'
+import { loadMemberName, saveProjects } from './storage'
 import type { ActivityItem, Project, Task, TaskStatus, User } from './types'
 import { db } from './lib/firebase'
 import { saveUser, getUserByEmail, getUserProjects, getUserById } from './lib/userUtils'
@@ -98,11 +99,8 @@ function App() {
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [memberNameInput, setMemberNameInput] = useState('')
   const [memberEmailInput, setMemberEmailInput] = useState('')
-  const [currentMember, setCurrentMember] = useState<string>('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState<string | null>(null)
-
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
 
   const [userCache, setUserCache] = useState<Record<string, User>>({})
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -202,8 +200,7 @@ function App() {
 
   useEffect(() => {
     if (!activeProjectId) return
-    const storedName = loadMemberName(activeProjectId)
-    setCurrentMember(storedName)
+    const storedName = loadMemberName()
     setMemberNameInput(storedName)
   }, [activeProjectId])
 
@@ -297,26 +294,6 @@ function App() {
     })
   }
 
-  async function upsertProjectAsync(mapper: (project: Project) => Project) {
-    return new Promise<Project | null>((resolve) => {
-      setProjects((prev) => {
-        const next = prev.map((p) => (p.id === activeProjectId ? mapper(p) : p))
-        const updated = next.find((p) => p.id === activeProjectId)
-        if (updated) {
-          setDoc(doc(db, 'projects', updated.id), updated)
-            .then(() => resolve(updated))
-            .catch((err) => {
-              console.error('Firebase sync error:', err)
-              resolve(null)
-            })
-        } else {
-          resolve(null)
-        }
-        return next
-      })
-    })
-  }
-
   async function upsertProjectAsyncById(projectId: string, mapper: (project: Project) => Project) {
     return new Promise<Project | null>((resolve) => {
       setProjects((prev) => {
@@ -375,57 +352,79 @@ function App() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
-    if (!loginForm.name.trim() || !loginForm.email.trim()) return
+    const name = loginForm.name.trim()
+    const email = loginForm.email.trim().toLowerCase()
+
+    console.log('[login] submit', { name, email })
+
+    if (!name || !email) {
+      console.warn('[login] missing required fields', { name, email })
+      setLoginError('Please enter both name and email.')
+      return
+    }
     
     try {
       setLoginError(null)
       // Check if user exists
-      const existingUser = await getUserByEmail(loginForm.email.trim())
+      console.log('[login] looking up user by email…')
+      const existingUser = await getUserByEmail(email)
+      console.log('[login] lookup result', existingUser)
       
       if (existingUser) {
         // User exists, check if name matches
-        if (existingUser.name !== loginForm.name.trim()) {
-          setLoginError(`Name does not match the existing user with this email.`)
+        if (existingUser.name !== name) {
+          console.warn('[login] name mismatch', { typedName: name, existingName: existingUser.name })
+          setLoginError('Name does not match the existing user with this email.')
           return
         }
         
         // User exists and name matches, log them in
         console.log('User already exists, logging in:', existingUser.id)
-        setCurrentUserId(existingUser.id)
-        setCurrentUserName(existingUser.name)
-        setCurrentUserEmail(existingUser.email)
         
         // Fetch all projects for this user
+        console.log('[login] fetching projects for existing user…', { userId: existingUser.id })
         const userProjects = await getUserProjects(existingUser.id)
-        setProjects(userProjects)
+        console.log('[login] fetched projects', { count: userProjects.length })
         
+        // Update state
+        setCurrentUserId(existingUser.id)
+        setCurrentUserName(existingUser.name)
+        setProjects(userProjects)
         setLoginForm({ name: '', email: '' })
-        goToOverview()
+        setView('overview')
+        setActiveProjectId(null)
+        const url = new URL(window.location.origin + '/')
+        window.history.replaceState({}, '', url.toString())
       } else {
         // User doesn't exist, create new user
-        const userId = uuid()
+        const newUserId = uuid()
         const now = new Date().toISOString()
         const newUser: User = {
-          id: userId,
-          name: loginForm.name.trim(),
-          email: loginForm.email.trim(),
+          id: newUserId,
+          name,
+          email,
           createdAt: now,
           updatedAt: now,
         }
         
         // Store new user in Firestore
+        console.log('[login] creating new user…', newUser)
         await saveUser(newUser)
         
-        console.log('New user created:', userId)
-        setCurrentUserId(userId)
-        setCurrentUserName(loginForm.name.trim())
-        setCurrentUserEmail(loginForm.email.trim())
+        console.log('New user created:', newUserId)
         
+        // Update state
+        setCurrentUserId(newUserId)
+        setCurrentUserName(name)
+        setProjects([])
         setLoginForm({ name: '', email: '' })
-        goToOverview()
+        setView('overview')
+        setActiveProjectId(null)
+        const url = new URL(window.location.origin + '/')
+        window.history.replaceState({}, '', url.toString())
       }
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('[login] error:', error)
       setLoginError('An error occurred during login. Please try again.')
     }
   }
@@ -433,10 +432,8 @@ function App() {
   function handleLogout() {
     setCurrentUserId(null)
     setCurrentUserName(null)
-    setCurrentUserEmail(null)
     setActiveProjectId(null)
     setProjects([])
-    clearProjects()
     goToOverview()
   }
 
@@ -520,22 +517,28 @@ function App() {
     try {
       const trimmed = memberNameInput.trim()
       const email = memberEmailInput.trim().toLowerCase()
+      console.log('[join] submit', { projectId: activeProject.id, name: trimmed, email })
       
       // Check if user exists by email
+      console.log('[join] looking up user by email…')
       const existingUser = await getUserByEmail(email)
+      console.log('[join] lookup result', existingUser)
       let userId: string
       
       if (existingUser) {
         // User exists - verify name matches
         if (existingUser.name !== trimmed) {
           // Name mismatch - let them use their registered name
+          console.warn('[join] name mismatch, using registered name', {
+            typedName: trimmed,
+            existingName: existingUser.name,
+          })
           setCurrentUserName(existingUser.name)
         } else {
           setCurrentUserName(trimmed)
         }
         // Save session for existing user
         setCurrentUserId(existingUser.id)
-        setCurrentUserEmail(existingUser.email)
         userId = existingUser.id
       } else {
         // User doesn't exist - create new user
@@ -546,15 +549,16 @@ function App() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }
+        console.log('[join] creating new user…', newUser)
         await saveUser(newUser)
         // Save session for new user
         setCurrentUserId(newUser.id)
         setCurrentUserName(newUser.name)
-        setCurrentUserEmail(newUser.email)
         userId = newUser.id
       }
       
       // Add to project members
+      console.log('[join] adding member to project', { projectId: activeProject.id, userId })
       upsertProject((project) => ({
         ...project,
         members: ensureMemberList(project.members, userId),
@@ -1175,7 +1179,6 @@ function App() {
                           </div>
                           <button
                             onClick={() => {
-                              setCurrentMember('')
                               setMemberNameInput('')
                             }}
                             className="text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"

@@ -1,4 +1,4 @@
-import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, setDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore'
 import { db } from './firebase'
 import type { User, Project } from '../types'
 
@@ -44,17 +44,14 @@ export async function getUserByEmail(email: string): Promise<User | null> {
  */
 export async function getUserById(userId: string): Promise<User | null> {
   try {
-    const userRef = collection(db, 'users')
-    const q = query(userRef, where('id', '==', userId))
-    const querySnapshot = await getDocs(q)
-
-    if (querySnapshot.empty) {
+    // Users are stored with document id === user.id (see saveUser()).
+    // Using getDoc is faster and avoids index/field mismatch issues.
+    const snap = await getDoc(doc(db, 'users', userId))
+    if (!snap.exists()) {
       console.log('No user found with id:', userId)
       return null
     }
-
-    const userData = querySnapshot.docs[0].data() as User
-    return userData
+    return snap.data() as User
   } catch (error) {
     console.error('Failed to fetch user by id:', error)
     throw error

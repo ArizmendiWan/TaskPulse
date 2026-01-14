@@ -1,6 +1,5 @@
 // Email service to send nudge emails via Cloud Function
-import { functions } from '../lib/firebase';
-import { httpsCallable } from 'firebase/functions';
+import { httpsCallable, getFunctions } from 'firebase/functions';
 
 export interface NudgeEmailPayload {
   taskTitle: string;
@@ -11,6 +10,7 @@ export interface NudgeEmailPayload {
 
 export async function sendNudgeEmails(payload: NudgeEmailPayload): Promise<void> {
   try {
+    const functions = getFunctions();
     const sendNudgeEmail = httpsCallable(functions, 'sendNudgeEmail');
     await sendNudgeEmail(payload);
   } catch (error) {

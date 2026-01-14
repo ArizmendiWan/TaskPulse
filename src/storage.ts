@@ -1,7 +1,6 @@
-import type { Project, User } from './types'
+import type { Project } from './types'
 
 const PROJECTS_KEY = 'taskpulse.projects.v1'
-const MEMBER_KEY_PREFIX = 'taskpulse.member.'
 
 export function loadProjects(): Project[] {
   if (typeof localStorage === 'undefined') return []
@@ -34,12 +33,12 @@ export function clearProjects() {
   }
 }
 
-export function loadMemberName(projectId: string | null): string {
+export function loadMemberName(): string {
   // Member names are managed in component state
   return ''
 }
 
-export function saveMemberName(projectId: string | null, name: string) {
+export function saveMemberName() {
   // Member names are managed in component state
   return
 }
