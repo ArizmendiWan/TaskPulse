@@ -17,44 +17,54 @@ afterEach(() => {
 })
 
 describe('TaskPulse MVP flow', () => {
-  it('creates a task and moves it out of the at-risk filter when started', () => {
-    window.history.pushState({}, '', '/new')
+  it('creates a task and moves it out of the at-risk filter when started', async () => {
     render(<App />)
 
-    fireEvent.change(screen.getByLabelText(/Project name/i), {
-      target: { value: 'Demo Project' },
-    })
-    fireEvent.click(screen.getByText(/Create project/i))
-
-    fireEvent.change(screen.getByLabelText(/Your name/i), {
+    // Log in first
+    fireEvent.change(screen.getByLabelText(/Name/i), {
       target: { value: 'Alex' },
     })
-    fireEvent.click(screen.getByText(/Save my name/i))
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: 'alex@example.com' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Login/i }))
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Add task/i })[0])
+    // Now navigate to create project
+    fireEvent.click(await screen.findByRole('button', { name: /NEW PROJECT/i }))
 
-    fireEvent.change(screen.getByLabelText(/^Title/i), {
+    fireEvent.change(await screen.findByLabelText(/Project name/i), {
+      target: { value: 'Demo Project' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Create Project & Get Link/i }))
+
+    // Now on project page, add task
+    fireEvent.click(await screen.findByRole('button', { name: /ADD TASK/i }))
+
+    fireEvent.change(await screen.findByPlaceholderText(/e\.g\. Write report introduction/i), {
       target: { value: 'Write report' },
     })
-    fireEvent.change(screen.getByLabelText(/Due date\/time/i), {
+    fireEvent.change(screen.getByLabelText(/Due date/i), {
       target: { value: '2025-01-01T12:00' },
     })
-    const modal = screen.getByRole('dialog', { name: /New task/i })
-    fireEvent.click(within(modal).getByRole('button', { name: /Add task/i }))
+    const modal = await screen.findByRole('dialog', { name: /New task/i })
+    fireEvent.click(within(modal).getByRole('button', { name: /CREATE TASK/i }))
 
-    fireEvent.click(screen.getAllByRole('button', { name: /At Risk/i })[0])
-    const taskCard = screen.getByText('Write report').closest('div') as HTMLElement
+    fireEvent.click(await screen.findByRole('button', { name: /AT RISK/i }))
+    const taskTitle = await screen.findByText('Write report')
+    const taskCard = taskTitle.closest('.group') as HTMLElement
     expect(taskCard).toBeTruthy()
 
-    const selects = within(taskCard).getAllByRole('combobox')
-    const statusSelect = selects[1]
+    // Expand the card
+    fireEvent.click(taskCard.querySelector('button')!)
+
+    const statusSelect = await within(taskCard).findByRole('combobox', { name: /status/i })
     fireEvent.change(statusSelect, { target: { value: 'in_progress' } })
 
-    fireEvent.click(screen.getAllByRole('button', { name: /At Risk/i })[0])
-    expect(screen.getByText(/No tasks in this view/i)).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /AT RISK/i }))
+    expect(await screen.findByText(/No tasks found/i)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText(/Due Soon/))
-    expect(screen.getByText('Write report')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /DUE SOON/i }))
+    expect(await screen.findByText('Write report')).toBeInTheDocument()
   })
 })
 

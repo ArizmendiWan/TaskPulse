@@ -1,6 +1,8 @@
 import type { Project } from './types'
 
 const PROJECTS_KEY = 'taskpulse.projects.v1'
+const USER_ID_KEY = 'taskpulse.user_id.v1'
+const USER_NAME_KEY = 'taskpulse.user_name.v1'
 
 export function loadProjects(): Project[] {
   if (typeof localStorage === 'undefined') return []
@@ -33,12 +35,25 @@ export function clearProjects() {
   }
 }
 
-export function loadMemberName(): string {
-  // Member names are managed in component state
-  return ''
+export function loadMemberId(): string | null {
+  if (typeof localStorage === 'undefined') return null
+  return localStorage.getItem(USER_ID_KEY)
 }
 
-export function saveMemberName() {
-  // Member names are managed in component state
-  return
+export function loadMemberName(): string | null {
+  if (typeof localStorage === 'undefined') return null
+  return localStorage.getItem(USER_NAME_KEY)
+}
+
+export function saveMemberInfo(id: string | null, name: string | null) {
+  if (typeof localStorage === 'undefined') return
+  try {
+    if (id) localStorage.setItem(USER_ID_KEY, id)
+    else localStorage.removeItem(USER_ID_KEY)
+
+    if (name) localStorage.setItem(USER_NAME_KEY, name)
+    else localStorage.removeItem(USER_NAME_KEY)
+  } catch (err) {
+    console.warn('Failed to save member info', err)
+  }
 }
