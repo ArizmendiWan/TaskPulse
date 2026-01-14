@@ -35,5 +35,14 @@ export interface Project {
   members: string[]
   tasks: Task[]
   createdAt: string
+  userId?: string
+}
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+  updatedAt: string
 }
 

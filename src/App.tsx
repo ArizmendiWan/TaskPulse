@@ -1,8 +1,9 @@
 import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { loadMemberName, loadProjects, saveMemberName, saveProjects } from './storage'
-import type { ActivityItem, Project, Task, TaskStatus } from './types'
+import type { ActivityItem, Project, Task, TaskStatus, User } from './types'
 import { db } from './lib/firebase'
+import { saveUser } from './lib/userUtils'
 import { doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
 import {
   deriveStatus,
@@ -85,7 +86,7 @@ function projectStats(project: Project) {
 function App() {
   const initialProjectId =
     new URLSearchParams(window.location.search).get('projectId') ?? null
-  const initialView: 'overview' | 'project' | 'create' =
+  const initialView: 'overview' | 'project' | 'create' | 'login' =
     window.location.pathname.endsWith('/new')
       ? 'create'
       : initialProjectId
@@ -96,13 +97,14 @@ function App() {
   const [activeProjectId, setActiveProjectId] = useState<string | null>(
     initialProjectId,
   )
-  const [view, setView] = useState<'overview' | 'project' | 'create'>(initialView)
+  const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [memberNameInput, setMemberNameInput] = useState('')
   const [currentMember, setCurrentMember] = useState<string>(() =>
     loadMemberName(initialProjectId),
   )
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
+  const [loginForm, setLoginForm] = useState({ name: '', email: '' })
   const [taskForm, setTaskForm] = useState<{
     title: string
     description: string
@@ -123,7 +125,7 @@ function App() {
     () => projects.find((p) => p.id === activeProjectId) ?? null,
     [projects, activeProjectId],
   )
-  const resolvedView: 'overview' | 'project' | 'create' =
+  const resolvedView: 'overview' | 'project' | 'create' | 'login' =
     view === 'project' && !activeProject && !initialProjectId ? 'overview' : view
   const memberList = useMemo(
     () =>
@@ -233,6 +235,35 @@ function App() {
     setActiveProjectId(null)
     const url = new URL(window.location.origin + '/new')
     window.history.replaceState({}, '', url.toString())
+  }
+
+  function goToLogin() {
+    setView('login')
+  }
+
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!loginForm.name.trim() || !loginForm.email.trim()) return
+    
+    const userId = uuid()
+    const now = new Date().toISOString()
+    const user: User = {
+      id: userId,
+      name: loginForm.name.trim(),
+      email: loginForm.email.trim(),
+      createdAt: now,
+      updatedAt: now,
+    }
+    
+    // Store user in Firestore
+    saveUser(user).catch((err) =>
+      console.error('Firebase user save error:', err),
+    )
+    
+    setCurrentMember(loginForm.name.trim())
+    saveMemberName(null, loginForm.name.trim())
+    setLoginForm({ name: '', email: '' })
+    goToOverview()
   }
 
   function goToProject(id: string) {
@@ -450,10 +481,11 @@ function App() {
           <section className="rounded-[2.5rem] bg-white p-8 shadow-xl shadow-slate-200 border border-slate-100">
             <form className="space-y-6" onSubmit={handleCreateProject}>
               <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-700 ml-1">
+                <label htmlFor="project-name" className="text-sm font-bold text-slate-700 ml-1">
                   Project Name <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  id="project-name"
                   required
                   name="project-name"
                   value={newProject.name}
@@ -463,10 +495,11 @@ function App() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-700 ml-1">
+                <label htmlFor="project-course" className="text-sm font-bold text-slate-700 ml-1">
                   Course / Class <span className="text-slate-400 font-normal text-xs">(optional)</span>
                 </label>
                 <input
+                  id="project-course"
                   name="project-course"
                   value={newProject.course}
                   onChange={(e) => setNewProject((p) => ({ ...p, course: e.target.value }))}
@@ -498,6 +531,75 @@ function App() {
     )
   }
 
+  if (resolvedView === 'login') {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+        <div className="mx-auto max-w-xl px-4 py-12 space-y-8">
+          <header className="text-center space-y-2">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">
+              TaskPulse
+            </p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Login</h1>
+            <p className="text-sm font-medium text-slate-500">
+              Enter your details to get started.
+            </p>
+          </header>
+
+          <section className="rounded-[2.5rem] bg-white p-8 shadow-xl shadow-slate-200 border border-slate-100">
+            <form className="space-y-6" onSubmit={handleLogin}>
+              <div className="space-y-1.5">
+                <label htmlFor="login-name" className="text-sm font-bold text-slate-700 ml-1">
+                  Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="login-name"
+                  required
+                  name="login-name"
+                  value={loginForm.name}
+                  onChange={(e) => setLoginForm((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-50"
+                  placeholder="e.g. John Doe"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="login-email" className="text-sm font-bold text-slate-700 ml-1">
+                  Email <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="login-email"
+                  required
+                  name="login-email"
+                  type="email"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm((p) => ({ ...p, email: e.target.value }))}
+                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-50"
+                  placeholder="e.g. john@example.com"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Login
+              </button>
+            </form>
+          </section>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={goToOverview}
+              className="group inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              Back to Overview
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (resolvedView === 'overview') {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
@@ -506,20 +608,31 @@ function App() {
             <div className="space-y-2">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">
                 TaskPulse
-              </p>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Your Projects</h1>
+                </p>
+              {/* TODO: change the "Project" to "{name} projects" */}
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Projects</h1>
               <p className="text-sm font-medium text-slate-500 max-w-md">
                 A birds-eye view of all your group projects and their current status.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={goToCreate}
-              className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-500 hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              New Project
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={goToLogin}
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-orange-200 transition-all hover:bg-orange-700 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={goToCreate}
+                className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-500 hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                New Project
+              </button>
+            </div>
           </header>
 
           {projects.length === 0 ? (
