@@ -1545,6 +1545,7 @@ function App() {
                       tasksForView.map((task) => {
                         const derived = deriveStatus(task)
                         const isRisk = isAtRisk(task)
+                        const soon = isDueSoon(task)
                         const overdue = isOverdue(task)
                         const expanded = expandedTasks[task.id]
 
@@ -1579,6 +1580,11 @@ function App() {
                                       >
                                         {statusLabels[derived]}
                                       </span>
+                                      {soon && !overdue && (
+                                        <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+                                          SOON
+                                        </span>
+                                      )}
                                       {isRisk && (
                                         <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
                                           <span className="w-1 h-1 bg-white rounded-full animate-ping" />
@@ -1739,7 +1745,34 @@ function App() {
                                   </div>
                                 </div>
 
-                                <div className="mt-6 space-y-4">
+                                <div className="mt-8 space-y-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                      Activity Log
+                                    </p>
+                                  </div>
+                                  <div className="space-y-4 pl-3 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                                    {task.activity.map((item) => (
+                                      <div key={item.id} className="relative pl-6">
+                                        <div className="absolute left-[-5px] top-1.5 h-2.5 w-2.5 rounded-full bg-white border-2 border-slate-300" />
+                                        <div className="space-y-1">
+                                          <div className="flex flex-wrap items-center gap-3">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 px-2 py-0.5 bg-slate-200 rounded-md">
+                                              {item.type.replace('_', ' ')}
+                                            </span>
+                                            <span className="text-[10px] font-black text-slate-400">
+                                              {formatDue(item.at).toUpperCase()}
+                                            </span>
+                                          </div>
+                                          <p className="text-sm font-bold text-slate-600">{item.note}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="mt-8 space-y-4">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
