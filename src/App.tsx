@@ -297,6 +297,46 @@ function App() {
     })
   }
 
+  async function upsertProjectAsync(mapper: (project: Project) => Project) {
+    return new Promise<Project | null>((resolve) => {
+      setProjects((prev) => {
+        const next = prev.map((p) => (p.id === activeProjectId ? mapper(p) : p))
+        const updated = next.find((p) => p.id === activeProjectId)
+        if (updated) {
+          setDoc(doc(db, 'projects', updated.id), updated)
+            .then(() => resolve(updated))
+            .catch((err) => {
+              console.error('Firebase sync error:', err)
+              resolve(null)
+            })
+        } else {
+          resolve(null)
+        }
+        return next
+      })
+    })
+  }
+
+  async function upsertProjectAsyncById(projectId: string, mapper: (project: Project) => Project) {
+    return new Promise<Project | null>((resolve) => {
+      setProjects((prev) => {
+        const next = prev.map((p) => (p.id === projectId ? mapper(p) : p))
+        const updated = next.find((p) => p.id === projectId)
+        if (updated) {
+          setDoc(doc(db, 'projects', updated.id), updated)
+            .then(() => resolve(updated))
+            .catch((err) => {
+              console.error('Firebase sync error:', err)
+              resolve(null)
+            })
+        } else {
+          resolve(null)
+        }
+        return next
+      })
+    })
+  }
+
   async function goToOverview() {
     
     
@@ -432,7 +472,7 @@ function App() {
     goToProject(id)
   }
 
-  function handleDeleteProject(id: string, name: string) {
+  async function handleDeleteProject(id: string, name: string) {
     const project = projects.find((p) => p.id === id)
     if (!project) return
 
@@ -440,25 +480,35 @@ function App() {
     const confirmMessage = isOwner
       ? `Are you sure you want to delete the project "${name}"? This action cannot be undone.`
       : `Are you sure you want to leave the project "${name}"? You can rejoin later if invited.`
-    const actionLabel = isOwner ? 'delete' : 'leave'
 
     if (window.confirm(confirmMessage)) {
-      if (isOwner) {
-        // Owner: delete project completely
-        setProjects((prev) => prev.filter((p) => p.id !== id))
-        deleteDoc(doc(db, 'projects', id)).catch((err) =>
-          console.error('Firebase delete project error:', err),
-        )
-      } else {
-        // Member: remove self from project
-        upsertProject((p) => ({
-          ...p,
-          members: p.members.filter((m) => m !== currentUserId),
-        }))
-      }
+      try {
+        if (isOwner) {
+          // Owner: delete project completely from DB
+          setProjects((prev) => prev.filter((p) => p.id !== id))
+          await deleteDoc(doc(db, 'projects', id))
+        } else {
+          // Member: remove self from project members in DB
+          const updatedProject = await upsertProjectAsyncById(id, (p) => ({
+            ...p,
+            members: p.members.filter((m) => m !== currentUserId),
+          }))
+          if (!updatedProject) {
+            throw new Error('Failed to update project')
+          }
+        }
 
-      if (activeProjectId === id) {
-        goToOverview()
+        // Refetch remaining projects for the member
+        if (currentUserId) {
+          const updatedProjects = await getUserProjects(currentUserId)
+          setProjects(updatedProjects)
+        }
+
+        if (activeProjectId === id) {
+          goToOverview()
+        }
+      } catch (err) {
+        console.error('Error deleting/leaving project:', err)
       }
     }
   }
