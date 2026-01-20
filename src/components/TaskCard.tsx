@@ -105,8 +105,10 @@ export const TaskCard = ({
         className="w-full text-left p-4 md:p-5 cursor-pointer"
       >
         <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <h4 className="text-base font-bold text-slate-900 truncate">{task.title}</h4>
+          <div className="space-y-1 min-w-0 flex-1">
+            <h4 className="text-base font-bold text-slate-900 break-words line-clamp-2 group-hover:line-clamp-none transition-all">
+              {task.title}
+            </h4>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className="text-[11px] font-medium text-slate-400">Due {formatDue(draft?.dueAt || task.dueAt)}</p>
               <p className="text-[11px] font-bold text-slate-600 truncate max-w-[180px]">
