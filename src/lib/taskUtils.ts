@@ -42,7 +42,7 @@ export function formatDue(dueAt: string): string {
 
 export function sortByDue(tasks: Task[]): Task[] {
   return [...tasks].sort(
-    (a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime(),
+    (a, b) => new Date(b.dueAt).getTime() - new Date(a.dueAt).getTime(),
   )
 }
 
