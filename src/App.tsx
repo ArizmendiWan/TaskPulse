@@ -680,6 +680,24 @@ function App() {
     }
   }
 
+  async function handleRemoveMember(memberId: string) {
+    if (!activeProject || !currentUserId) return
+    if (activeProject.ownerId !== currentUserId) return
+    if (memberId === currentUserId) return
+
+    const memberName = getUserName(memberId)
+    if (!window.confirm(`Are you sure you want to remove ${memberName} from this project?`)) return
+
+    try {
+      await upsertProjectAsyncById(activeProject.id, (p) => ({
+        ...p,
+        members: p.members.filter((m) => m !== memberId),
+      }))
+    } catch (err) {
+      console.error('Failed to remove member:', err)
+    }
+  }
+
   function handleCreateTask(e: React.FormEvent) {
     e.preventDefault()
     if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt) return
@@ -1359,26 +1377,60 @@ function App() {
                           {memberList.map((memberId) => {
                             const memberName = getUserName(memberId)
                             const isCurrentUser = memberId === currentUserId
+                            const isOwner = activeProject.ownerId === memberId
+                            const canRemove = activeProject.ownerId === currentUserId && !isCurrentUser
+
                             return (
-                          <div
+                              <div
                                 key={memberId}
-                            className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
+                                className={`flex items-center justify-between gap-3 p-2 rounded-xl border-2 transition-all group/member ${
                                   isCurrentUser
-                                ? 'bg-amber-50 border-amber-200 shadow-sm'
-                                : 'bg-slate-50 border-transparent hover:border-slate-100'
-                            }`}
-                          >
-                                <div
-                                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
-                                    isCurrentUser ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
-                                  }`}
-                                >
-                                  {memberName.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-sm font-bold text-slate-700 truncate">
-                                  {memberName} {isCurrentUser && '(You)'}
-                            </span>
-                          </div>
+                                    ? 'bg-amber-50 border-amber-200 shadow-sm'
+                                    : 'bg-slate-50 border-transparent hover:border-slate-100'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
+                                      isCurrentUser ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
+                                    }`}
+                                  >
+                                    {memberName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-sm font-bold text-slate-700 truncate">
+                                      {memberName} {isCurrentUser && '(You)'}
+                                    </span>
+                                    {isOwner && (
+                                      <span className="text-[9px] font-black text-amber-600 uppercase tracking-wider">
+                                        Project Owner
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {canRemove && (
+                                  <button
+                                    onClick={() => handleRemoveMember(memberId)}
+                                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover/member:opacity-100"
+                                    title="Remove from project"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M18 6 6 18" />
+                                      <path d="m6 6 12 12" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
                             )
                           })}
                       </div>
