@@ -123,6 +123,7 @@ function App() {
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
+  const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})
 
   // ===== Delete confirmation code modal state =====
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -828,7 +829,12 @@ function App() {
     navigator.clipboard?.writeText(link).catch(() => {})
   }
 
-  function copyNudge(task: Task) {
+  async function copyNudge(task: Task) {
+    if (task.owners.length === 0) {
+      alert('Cannot nudge an unassigned task. Please assign someone first!')
+      return
+    }
+
     const formattedDue = formatDue(task.dueAt)
     const message = `Hey — “${task.title}” is due ${formattedDue}. Can you start it or update the status?`
     navigator.clipboard?.writeText(message).catch(() => {})
@@ -837,14 +843,31 @@ function App() {
       .map((ownerId) => userCache[ownerId]?.email)
       .filter((email): email is string => Boolean(email))
 
-    if (recipientEmails.length === 0) return
+    if (recipientEmails.length === 0) {
+      alert('Could not find email addresses for the assigned owners.')
+      return
+    }
 
-    sendNudgeEmails({
-      taskTitle: task.title,
-      dueAt: formattedDue,
-      recipientEmails,
-      senderName: currentUserName || 'Teammate',
-    }).catch(() => {})
+    try {
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
+      await sendNudgeEmails({
+        taskTitle: task.title,
+        dueAt: formattedDue,
+        recipientEmails,
+        senderName: currentUserName || 'Teammate',
+      })
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
+      // Reset feedback after 3 seconds
+      setTimeout(() => {
+        setNudgeFeedback((prev) => ({ ...prev, [task.id]: null }))
+      }, 3000)
+    } catch (err) {
+      console.error('Nudge failed:', err)
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'error' }))
+      setTimeout(() => {
+        setNudgeFeedback((prev) => ({ ...prev, [task.id]: null }))
+      }, 3000)
+    }
   }
 
   if (resolvedView === 'create') {
@@ -1762,27 +1785,50 @@ function App() {
                                     {isRisk && (
                                       <button
                                         type="button"
+                                        disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           copyNudge(task)
                                         }}
-                                        className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 transition-all flex items-center gap-1.5"
+                                        className={`rounded-lg px-3 py-1.5 text-[10px] font-black transition-all flex items-center gap-1.5 ${
+                                          task.owners.length === 0
+                                            ? 'bg-slate-50 border border-slate-200 text-slate-300 cursor-not-allowed'
+                                            : nudgeFeedback[task.id] === 'sent'
+                                              ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                                              : nudgeFeedback[task.id] === 'error'
+                                                ? 'bg-rose-50 border border-rose-200 text-rose-700'
+                                                : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'
+                                        }`}
                                       >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          width="10"
-                                          height="10"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="3"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        >
-                                          <path d="m22 2-7 20-4-9-9-4Z" />
-                                          <path d="M22 2 11 13" />
-                                        </svg>
-                                        Nudge
+                                        {nudgeFeedback[task.id] === 'sending' ? (
+                                          <div className="w-2.5 h-2.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                                        ) : nudgeFeedback[task.id] === 'sent' ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                        ) : nudgeFeedback[task.id] === 'error' ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                        ) : (
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="10"
+                                            height="10"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="3"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <path d="m22 2-7 20-4-9-9-4Z" />
+                                            <path d="M22 2 11 13" />
+                                          </svg>
+                                        )}
+                                        {nudgeFeedback[task.id] === 'sending'
+                                          ? 'Sending...'
+                                          : nudgeFeedback[task.id] === 'sent'
+                                            ? 'Sent!'
+                                            : nudgeFeedback[task.id] === 'error'
+                                              ? 'Error'
+                                              : 'Nudge'}
                                       </button>
                                     )}
                                     <svg
