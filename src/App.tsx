@@ -86,22 +86,32 @@ function App() {
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
-    let base = sortByDue(activeProject.tasks)
-    
-    // Apply status filter first
+    let base = [...activeProject.tasks]
+
+    // Apply status filter
     switch (filter) {
-      case 'mine': base = filterMyTasks(base, currentUserId || null); break
-      case 'dueSoon': base = filterDueSoon(base); break
-      case 'atRisk': base = filterAtRisk(base); break
-      case 'overdue': base = filterOverdue(base); break
+      case 'mine': base = base.filter((t) => t.owners.includes(currentUserId || '')); break
+      case 'dueSoon': base = base.filter((t) => filterDueSoon([t]).length > 0); break
+      case 'atRisk': base = base.filter((t) => filterAtRisk([t]).length > 0); break
+      case 'overdue': base = base.filter((t) => filterOverdue([t]).length > 0); break
     }
 
-    // Then filter out done tasks if needed
+    // Filter out done tasks if needed
     if (!showDone) {
-      return base.filter(t => t.status !== 'done')
+      base = base.filter((t) => t.status !== 'done')
     }
 
-    return base
+    // Sort: 1. Active vs Done (done to the bottom), 2. Due Date (nearest first)
+    return base.sort((a, b) => {
+      // 1. Status: done to the bottom
+      if (a.status === 'done' && b.status !== 'done') return 1
+      if (a.status !== 'done' && b.status === 'done') return -1
+
+      // 2. Due Date: nearest first
+      const timeA = new Date(a.dueAt).getTime()
+      const timeB = new Date(b.dueAt).getTime()
+      return timeA - timeB
+    })
   }, [activeProject, filter, currentUserId, showDone])
 
   // Handlers
