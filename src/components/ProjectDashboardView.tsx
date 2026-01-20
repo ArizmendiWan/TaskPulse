@@ -33,6 +33,9 @@ interface ProjectDashboardViewProps {
   onOwnerChange: (task: Task, ownerId: string) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
+  onAddComment: (task: Task, text: string) => void
+  onUpdateComment: (task: Task, commentId: string, text: string) => void
+  onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
   onNudge: (task: Task) => void
 }
@@ -66,6 +69,9 @@ export const ProjectDashboardView = ({
   onOwnerChange,
   onDueChange,
   onDescriptionChange,
+  onAddComment,
+  onUpdateComment,
+  onDeleteComment,
   onDeleteTask,
   onNudge,
 }: ProjectDashboardViewProps) => {
@@ -208,6 +214,9 @@ export const ProjectDashboardView = ({
                         onOwnerChange={onOwnerChange}
                         onDueChange={onDueChange}
                         onDescriptionChange={onDescriptionChange}
+                        onAddComment={onAddComment}
+                        onUpdateComment={onUpdateComment}
+                        onDeleteComment={onDeleteComment}
                         onDeleteTask={onDeleteTask}
                         onNudge={onNudge}
                         getUserName={getUserName}

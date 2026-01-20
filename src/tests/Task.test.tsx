@@ -91,8 +91,16 @@ describe('Task Management', () => {
     const taskCard = taskTitle.closest('.group') as HTMLElement
     fireEvent.click(within(taskCard).getByRole('button', { name: /Move Me/i }))
 
+    // Enter Edit mode
+    const editButton = await within(taskCard).findByRole('button', { name: /Edit Task/i })
+    fireEvent.click(editButton)
+
     const statusSelect = await within(taskCard).findByRole('combobox', { name: /status/i })
     fireEvent.change(statusSelect, { target: { value: 'in_progress' } })
+
+    // Finish Edit mode
+    const doneButton = await within(taskCard).findByRole('button', { name: /Done Editing/i })
+    fireEvent.click(doneButton)
 
     // Check filter
     const filterContainer = await screen.findByRole('group', { name: /task filters/i })

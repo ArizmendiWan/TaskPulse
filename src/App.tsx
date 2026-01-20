@@ -301,6 +301,41 @@ function App() {
     }))
   }
 
+  const handleAddComment = (task: Task, text: string) => {
+    if (!currentUserId || !text.trim()) return
+    const newComment = {
+      id: uuid(),
+      authorId: currentUserId,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: [...(t.comments || []), newComment],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleUpdateComment = (task: Task, commentId: string, text: string) => {
+    if (!text.trim()) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: (t.comments || []).map((c) =>
+        c.id === commentId ? { ...c, text: text.trim(), updatedAt: new Date().toISOString() } : c,
+      ),
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleDeleteComment = (task: Task, commentId: string) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: (t.comments || []).filter((c) => c.id !== commentId),
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
   const handleDeleteTask = (task: Task) => {
     if (window.confirm(`Delete task "${task.title}"?`)) {
       upsertProject((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== task.id) }))
@@ -411,6 +446,9 @@ function App() {
           onOwnerChange={handleOwnerChange}
           onDueChange={handleDueChange}
           onDescriptionChange={handleDescriptionChange}
+          onAddComment={handleAddComment}
+          onUpdateComment={handleUpdateComment}
+          onDeleteComment={handleDeleteComment}
           onDeleteTask={handleDeleteTask}
           onNudge={handleNudge}
         />

@@ -15,6 +15,14 @@ export interface ActivityItem {
   at: string
 }
 
+export interface Comment {
+  id: string
+  authorId: string
+  text: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Task {
   id: string
   title: string
@@ -24,6 +32,7 @@ export interface Task {
   difficulty: TaskDifficulty
   status: TaskStatus
   activity: ActivityItem[]
+  comments?: Comment[]
   createdAt: string
   updatedAt: string
 }
