@@ -19,7 +19,6 @@ interface SidebarProps {
   onRemoveMember: (memberId: string) => void
   onOpenDeleteModal: (project: Project) => void
   onGoToOverview: () => void
-  onLogout: () => void
   onUpdateUserName: (newName: string) => Promise<void>
 }
 
@@ -39,7 +38,6 @@ export const Sidebar = ({
   onRemoveMember,
   onOpenDeleteModal,
   onGoToOverview,
-  onLogout,
   onUpdateUserName,
 }: SidebarProps) => {
   const [isEditingName, setIsEditingName] = useState(false)

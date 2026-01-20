@@ -43,7 +43,6 @@ interface ProjectDashboardViewProps {
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
   onNudge: (task: Task) => void
-  onLogout: () => void
   onUpdateUserName: (newName: string) => Promise<void>
   onTogglePin: (task: Task) => void
 }
@@ -86,7 +85,6 @@ export const ProjectDashboardView = ({
   onDeleteComment,
   onDeleteTask,
   onNudge,
-  onLogout,
   onUpdateUserName,
   onTogglePin,
 }: ProjectDashboardViewProps) => {
@@ -108,7 +106,6 @@ export const ProjectDashboardView = ({
         onRemoveMember={onRemoveMember}
         onOpenDeleteModal={onOpenDeleteModal}
         onGoToOverview={onGoToOverview}
-        onLogout={onLogout}
         onUpdateUserName={onUpdateUserName}
       />
 

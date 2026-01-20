@@ -553,7 +553,6 @@ function App() {
           onDeleteComment={handleDeleteComment}
           onDeleteTask={handleDeleteTask}
           onNudge={handleNudge}
-          onLogout={logout}
           onUpdateUserName={handleUpdateUserName}
           onTogglePin={handleToggleTaskPin}
         />
