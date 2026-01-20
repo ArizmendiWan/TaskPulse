@@ -28,6 +28,9 @@ import { ProjectDashboardView } from './components/ProjectDashboardView'
 import { TaskCreationModal } from './components/TaskCreationModal'
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
 
+// ✅ 新增：AI Chat Modal
+import { AiChatModal } from './components/AiChatModal'
+
 function App() {
   const initialProjectId = new URLSearchParams(window.location.search).get('projectId') ?? null
   const initialView: 'overview' | 'project' | 'create' | 'login' =
@@ -68,6 +71,9 @@ function App() {
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
   const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})
 
+  // ✅ 新增：AI Chat 打开/关闭
+  const [aiOpen, setAiOpen] = useState(false)
+
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     name: string
@@ -76,7 +82,12 @@ function App() {
   const [deleteConfirmCode, setDeleteConfirmCode] = useState('')
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
 
-  const resolvedView = !currentUserId && view !== 'create' ? 'login' : view === 'project' && !activeProject && !activeProjectId ? 'overview' : view
+  const resolvedView =
+    !currentUserId && view !== 'create'
+      ? 'login'
+      : view === 'project' && !activeProject && !activeProjectId
+        ? 'overview'
+        : view
 
   const memberList = useMemo(
     () => (activeProject ? Array.from(new Set(activeProject.members.filter(Boolean))) : []),
@@ -87,11 +98,16 @@ function App() {
     if (!activeProject) return []
     const base = sortByDue(activeProject.tasks)
     switch (filter) {
-      case 'mine': return filterMyTasks(base, currentUserId || null)
-      case 'dueSoon': return filterDueSoon(base)
-      case 'atRisk': return filterAtRisk(base)
-      case 'overdue': return filterOverdue(base)
-      default: return base
+      case 'mine':
+        return filterMyTasks(base, currentUserId || null)
+      case 'dueSoon':
+        return filterDueSoon(base)
+      case 'atRisk':
+        return filterAtRisk(base)
+      case 'overdue':
+        return filterOverdue(base)
+      default:
+        return base
     }
   }, [activeProject, filter, currentUserId])
 
@@ -221,7 +237,13 @@ function App() {
   }
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!activeProject || !currentUserId || activeProject.ownerId !== currentUserId || memberId === currentUserId) return
+    if (
+      !activeProject ||
+      !currentUserId ||
+      activeProject.ownerId !== currentUserId ||
+      memberId === currentUserId
+    )
+      return
     if (!window.confirm(`Remove ${getUserName(memberId)} from project?`)) return
     await upsertProjectAsyncById(activeProject.id, (p) => ({
       ...p,
@@ -265,19 +287,35 @@ function App() {
     handleUpdateTask(task.id, (t) => ({
       ...t,
       status: next,
-      activity: [...t.activity, createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`)],
+      activity: [
+        ...t.activity,
+        createActivity(
+          'status_changed',
+          `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`,
+        ),
+      ],
       updatedAt: new Date().toISOString(),
     }))
   }
 
   const handleOwnerChange = (task: Task, ownerId: string) => {
     const isAlreadyOwner = task.owners.includes(ownerId)
-    const nextOwners = isAlreadyOwner ? task.owners.filter((o) => o !== ownerId) : [...task.owners, ownerId]
+    const nextOwners = isAlreadyOwner
+      ? task.owners.filter((o) => o !== ownerId)
+      : [...task.owners, ownerId]
     handleUpdateTask(task.id, (t) => ({
       ...t,
       owners: nextOwners,
       status: nextOwners.length > 0 ? (t.status === 'unassigned' ? 'not_started' : t.status) : 'unassigned',
-      activity: [...t.activity, createActivity('owner_changed', isAlreadyOwner ? `Removed owner: ${getUserName(ownerId)}` : `Added owner: ${getUserName(ownerId)}`)],
+      activity: [
+        ...t.activity,
+        createActivity(
+          'owner_changed',
+          isAlreadyOwner
+            ? `Removed owner: ${getUserName(ownerId)}`
+            : `Added owner: ${getUserName(ownerId)}`,
+        ),
+      ],
       updatedAt: new Date().toISOString(),
     }))
     if (!isAlreadyOwner) upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, ownerId) }))
@@ -315,7 +353,12 @@ function App() {
 
     try {
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
-      await sendNudgeEmails({ taskTitle: task.title, dueAt: due, recipientEmails: emails, senderName: currentUserName || 'Teammate' })
+      await sendNudgeEmails({
+        taskTitle: task.title,
+        dueAt: due,
+        recipientEmails: emails,
+        senderName: currentUserName || 'Teammate',
+      })
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     } catch (err) {
@@ -362,6 +405,7 @@ function App() {
           onGoToOverview={handleGoToOverview}
         />
       )}
+
       {resolvedView === 'create' && (
         <CreateProjectView
           newProject={newProject}
@@ -370,6 +414,7 @@ function App() {
           onGoToOverview={handleGoToOverview}
         />
       )}
+
       {resolvedView === 'overview' && (
         <ProjectOverviewView
           currentUserName={currentUserName}
@@ -381,6 +426,7 @@ function App() {
           onOpenDeleteModal={handleOpenDeleteModal}
         />
       )}
+
       {resolvedView === 'project' && activeProject && (
         <ProjectDashboardView
           activeProject={activeProject}
@@ -407,6 +453,10 @@ function App() {
           onGoToOverview={handleGoToOverview}
           onCopyLink={(link) => navigator.clipboard?.writeText(link)}
           onShowTaskModal={() => setShowTaskModal(true)}
+
+          // ✅ 新增：打开 AI
+          onOpenAI={() => setAiOpen(true)}
+
           onStatusChange={handleStatusChange}
           onOwnerChange={handleOwnerChange}
           onDueChange={handleDueChange}
@@ -438,6 +488,9 @@ function App() {
           onConfirm={handleExecuteDelete}
         />
       )}
+
+      {/* ✅ 新增：AI 对话窗口（放最底部即可） */}
+      <AiChatModal open={aiOpen} onClose={() => setAiOpen(false)} />
     </>
   )
 }

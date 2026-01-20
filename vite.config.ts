@@ -7,18 +7,30 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react({
       babel: {
         plugins: ['babel-plugin-react-compiler'],
-      }
-    })],
+      },
+    }),
+  ],
+
+  // ✅ 关键：让 Vite 上的 /api/* 转发到 Vercel Functions
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
+
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: [resolve(__dirname, 'vite-setup.ts')],
-  }
+  },
 })

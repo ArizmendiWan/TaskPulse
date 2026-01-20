@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest --ui",
-    "coverage": "vitest run --coverage"
-  },
+  "dev": "vite --port 5173",
+  "dev:api": "vercel dev --listen 3000",
+  "dev:full": "concurrently -k -n API,WEB -c auto \"npm run dev:api\" \"npm run dev\"",
+  "build": "tsc -b && vite build",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "test": "vitest --ui",
+  "coverage": "vitest run --coverage"
+},
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "firebase": "^12.7.0",
@@ -26,10 +28,11 @@
     "@types/node": "^25.0.6",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
+    "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.16",
     "babel-plugin-react-compiler": "^1.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",
@@ -37,7 +40,7 @@
     "jsdom": "^27.4.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.52.0",
-    "vite": "^7.3.1",
+    "vite": "^5.4.21",
     "vitest": "^4.0.16"
   }
 }

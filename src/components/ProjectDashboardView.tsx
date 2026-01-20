@@ -1,8 +1,9 @@
+import type React from 'react'
 import type { Project, Task, TaskStatus } from '../types'
 import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { Sidebar } from './Sidebar'
 import { TaskCard } from './TaskCard'
-import type React from 'react'
+import { AiChatWidget } from './AiChatWidget'
 
 interface ProjectDashboardViewProps {
   activeProject: Project
@@ -164,11 +165,7 @@ export const ProjectDashboardView = ({
               </div>
             ) : (
               <div className="space-y-6 pb-20">
-                <div
-                  className="flex flex-wrap items-center gap-2"
-                  role="group"
-                  aria-label="task filters"
-                >
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="task filters">
                   {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
                     <button
                       key={key}
@@ -222,8 +219,14 @@ export const ProjectDashboardView = ({
             )}
           </div>
         </div>
+
+        {/* ✅ AI 浮动对话窗口（自带按钮/开关） */}
+        <AiChatWidget
+          projectName={activeProject.name}
+          contextHint={`You are helping manage a student team project in TaskPulse.
+Keep answers short and actionable. If asked about tasks, suggest next steps and priorities.`}
+        />
       </main>
     </div>
   )
 }
-
