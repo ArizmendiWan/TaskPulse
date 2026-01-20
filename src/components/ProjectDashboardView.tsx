@@ -215,7 +215,7 @@ export const ProjectDashboardView = ({
                         </svg>
                       )}
                     </div>
-                    {showDone ? 'Hide Done' : 'Showing Active'}
+                    Hide Done
                   </button>
                 </div>
 
