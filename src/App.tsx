@@ -367,24 +367,32 @@ function App() {
 
   const handleExecuteDelete = async () => {
     if (!deleteTarget) return
-    if (deleteTarget.isOwner) {
-      await deleteProject(deleteTarget.id)
+    const targetId = deleteTarget.id
+    const isOwner = deleteTarget.isOwner
+
+    // If leaving the active project, clear active project first to prevent auto-join useEffect
+    if (activeProjectId === targetId) {
+      handleGoToOverview()
+    }
+
+    if (isOwner) {
+      await deleteProject(targetId)
     } else {
-      await upsertProjectAsyncById(deleteTarget.id, (p) => ({
+      await upsertProjectAsyncById(targetId, (p) => ({
         ...p,
         members: p.members.filter((m) => m !== currentUserId),
       }))
     }
-    if (activeProjectId === deleteTarget.id) handleGoToOverview()
     setDeleteTarget(null)
   }
 
   // Auto-join if visitor has projectId but not in members
   useEffect(() => {
-    if (currentUserId && activeProject && !activeProject.members.includes(currentUserId)) {
+    // Only auto-join if we are currently in the project view
+    if (view === 'project' && currentUserId && activeProject && !activeProject.members.includes(currentUserId)) {
       upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, currentUserId) }))
     }
-  }, [currentUserId, activeProject])
+  }, [currentUserId, activeProject, view])
 
   return (
     <>
