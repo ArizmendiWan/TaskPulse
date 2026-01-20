@@ -104,49 +104,52 @@ export const TaskCard = ({
         }}
         className="w-full text-left p-4 md:p-5 cursor-pointer"
       >
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1 min-w-0 max-w-[65%]">
             <h4 className="text-base font-bold text-slate-900 break-words line-clamp-2 group-hover:line-clamp-none transition-all">
               {task.title}
             </h4>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className="text-[11px] font-medium text-slate-400">Due {formatDue(draft?.dueAt || task.dueAt)}</p>
               <p className="text-[11px] font-bold text-slate-600 truncate max-w-[180px]">
                 {(draft?.owners || task.owners).map((id) => getUserName(id)).join(', ') ||
                   'Unassigned'}
               </p>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${statusPills[derived]}`}
-                >
-                  {statusLabels[derived]}
-                </span>
-                {isRisk && (
-                  <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
-                    <span className="w-1 h-1 bg-white rounded-full animate-ping" />
-                    AT RISK
-                  </span>
-                )}
-                {dueSoon && !isRisk && !overdue && (
-                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
-                    SOON
-                  </span>
-                )}
-              </div>
+              <p className="text-[11px] font-medium text-slate-400">Due {formatDue(draft?.dueAt || task.dueAt)}</p>
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-4">
+          <div className="shrink-0 flex flex-col items-end gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+              <span
+                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[75px] ${statusPills[derived]}`}
+              >
+                {statusLabels[derived]}
+              </span>
+              {isRisk && (
+                <span className="rounded-full bg-rose-600 px-2 h-6 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
+                  <span className="w-1 h-1 bg-white rounded-full animate-ping" />
+                  AT RISK
+                </span>
+              )}
+              {dueSoon && !isRisk && !overdue && (
+                <span className="rounded-full bg-amber-500 px-2 h-6 text-[9px] font-black uppercase tracking-wider text-white flex items-center">
+                  SOON
+                </span>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               {isRisk && (
                 <button
                   type="button"
-                  disabled={(draft?.owners || task.owners).length === 0 || nudgeFeedback[task.id] === 'sending'}
+                  disabled={
+                    (draft?.owners || task.owners).length === 0 || nudgeFeedback[task.id] === 'sending'
+                  }
                   onClick={(e) => {
                     e.stopPropagation()
                     onNudge(task)
                   }}
-                  className={`rounded-lg px-3 py-1.5 text-[10px] font-black transition-all flex items-center gap-1.5 ${
+                  className={`rounded-lg px-2 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[75px] ${
                     (draft?.owners || task.owners).length === 0
                       ? 'bg-slate-50 border border-slate-200 text-slate-300 cursor-not-allowed'
                       : nudgeFeedback[task.id] === 'sent'
@@ -263,30 +266,28 @@ export const TaskCard = ({
               </svg>
               {isEditing ? 'Done Editing' : 'Edit Task'}
             </button>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={() => onDeleteTask(task)}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+            <button
+              type="button"
+              onClick={() => onDeleteTask(task)}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 6h18" />
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                </svg>
-                Delete
-              </button>
-            )}
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+              Delete
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
