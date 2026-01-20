@@ -1,5 +1,6 @@
 import type React from 'react'
 import type { Project } from '../types'
+import { theme } from '../theme'
 
 interface TaskCreationModalProps {
   taskForm: {
@@ -40,22 +41,22 @@ export const TaskCreationModal = ({
         role="dialog"
         aria-modal="true"
         aria-label="New task"
-        className="w-full max-w-xl rounded-[3rem] bg-white p-10 shadow-2xl transition-all animate-in fade-in zoom-in duration-300"
+        className={`w-full max-w-xl rounded-[3rem] ${theme.colors.ui.surface} p-10 shadow-2xl transition-all animate-in fade-in zoom-in duration-300`}
       >
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600">
               TaskPulse
             </p>
-            <h3 className="text-3xl font-black text-slate-900 tracking-tight">Add a Task</h3>
-            <p className="text-sm font-bold text-slate-500">
+            <h3 className={`text-3xl font-black ${theme.colors.ui.text} tracking-tight`}>Add a Task</h3>
+            <p className={`text-sm font-bold ${theme.colors.ui.textMuted}`}>
               Keep it clear so the team knows what to do.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-slate-50 p-3 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
+            className={`rounded-full ${theme.colors.ui.background} p-3 ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} transition-all`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -78,7 +79,7 @@ export const TaskCreationModal = ({
           <div className="space-y-2">
             <label
               htmlFor="task-title"
-              className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1"
+              className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}
             >
               Task Title <span className="text-rose-500">*</span>
             </label>
@@ -88,7 +89,7 @@ export const TaskCreationModal = ({
               name="task-title"
               value={taskForm.title}
               onChange={(e) => setTaskForm((t) => ({ ...t, title: e.target.value }))}
-              className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+              className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-sm font-black focus:outline-none transition-all`}
               placeholder="e.g. Write report introduction"
             />
           </div>
@@ -97,7 +98,7 @@ export const TaskCreationModal = ({
             <div className="space-y-2">
               <label
                 htmlFor="task-due"
-                className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1"
+                className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}
               >
                 Due Date <span className="text-rose-500">*</span>
               </label>
@@ -108,18 +109,18 @@ export const TaskCreationModal = ({
                 name="task-due"
                 value={taskForm.dueAt}
                 onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
-                className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-[13px] font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+              <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Difficulty
               </label>
               <select
                 name="task-difficulty"
                 value={taskForm.difficulty}
                 onChange={(e) => setTaskForm((t) => ({ ...t, difficulty: e.target.value }))}
-                className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-sm font-black focus:outline-none transition-all`}
               >
                 <option value="">Select...</option>
                 <option value="S">S (Tiny)</option>
@@ -130,10 +131,10 @@ export const TaskCreationModal = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+            <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
               Owners
             </label>
-            <div className="flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 border-slate-50 bg-slate-50">
+            <div className={`flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 ${theme.colors.ui.border} ${theme.colors.ui.background}`}>
               {[
                 ...new Set(
                   [...(activeProject?.members || []), ...(currentUserId ? [currentUserId] : [])].filter(
@@ -155,7 +156,7 @@ export const TaskCreationModal = ({
                   className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
                     taskForm.owners.includes(memberId)
                       ? 'bg-amber-500 text-white shadow-md'
-                      : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+                      : `${theme.colors.ui.surface} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.background} border border-slate-200 dark:border-slate-700`
                   }`}
                 >
                   {getUserName(memberId)}
@@ -165,7 +166,7 @@ export const TaskCreationModal = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+            <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
               Description
             </label>
             <textarea
@@ -173,7 +174,7 @@ export const TaskCreationModal = ({
               value={taskForm.description}
               onChange={(e) => setTaskForm((t) => ({ ...t, description: e.target.value }))}
               rows={3}
-              className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
+              className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-sm font-black focus:outline-none transition-all resize-none`}
               placeholder="Add some details..."
             />
           </div>
@@ -182,13 +183,13 @@ export const TaskCreationModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-[1.5rem] border-2 border-slate-100 px-6 py-4 text-sm font-black text-slate-500 hover:bg-slate-50 transition-colors"
+              className={`flex-1 rounded-[1.5rem] border-2 ${theme.colors.ui.border} px-6 py-4 text-sm font-black ${theme.colors.ui.textMuted} hover:${theme.colors.ui.background} transition-colors`}
             >
               CANCEL
             </button>
             <button
               type="submit"
-              className="flex-[1.5] rounded-[1.5rem] bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 transition-all"
+              className={`flex-[1.5] rounded-[1.5rem] ${theme.colors.action.primary.bg} px-6 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl shadow-slate-200 dark:shadow-black/50 ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0 transition-all`}
             >
               CREATE TASK
             </button>

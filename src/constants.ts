@@ -1,5 +1,6 @@
 import type { ActivityItem, Project } from './types'
 import { filterDueSoon, filterAtRisk, filterOverdue } from './lib/taskUtils'
+import { theme } from './theme'
 
 export type FilterKey = 'all' | 'mine' | 'dueSoon' | 'atRisk' | 'overdue'
 
@@ -12,11 +13,11 @@ export const statusLabels: Record<string, string> = {
 }
 
 export const statusPills: Record<string, string> = {
-  unassigned: 'bg-slate-50 text-slate-500 border border-slate-200',
-  not_started: 'bg-amber-50 text-amber-700 border border-amber-200',
-  in_progress: 'bg-blue-50 text-blue-700 border border-blue-200',
-  done: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  overdue: 'bg-rose-50 text-rose-700 border border-rose-200',
+  unassigned: theme.colors.status.unassigned.pill,
+  not_started: theme.colors.status.not_started.pill,
+  in_progress: theme.colors.status.in_progress.pill,
+  done: theme.colors.status.done.pill,
+  overdue: theme.colors.status.overdue.pill,
 }
 
 export const filterLabels: Record<FilterKey, string> = {

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Task, TaskStatus } from '../types'
 import { deriveStatus, isAtRisk, isOverdue, isDueSoon, formatDue } from '../lib/taskUtils'
 import { statusLabels, statusPills } from '../constants'
+import { theme } from '../theme'
 
 interface TaskCardProps {
   task: Task
@@ -86,10 +87,10 @@ export const TaskCard = ({
     <div
       className={`group relative rounded-2xl border transition-all duration-300 ${
         overdue
-          ? 'border-rose-100 bg-rose-50/10'
+          ? 'border-rose-100 dark:border-rose-900/30 bg-rose-50/10 dark:bg-rose-900/10'
           : isRisk
-            ? 'border-amber-100 bg-amber-50/10'
-            : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
+            ? 'border-amber-100 dark:border-amber-900/30 bg-amber-50/10 dark:bg-amber-900/10'
+            : `${theme.colors.ui.border} ${theme.colors.ui.surface} hover:${theme.colors.ui.borderStrong} hover:shadow-md dark:hover:shadow-black/50`
       }`}
     >
       <div
@@ -104,44 +105,32 @@ export const TaskCard = ({
         }}
         className="w-full text-left p-4 md:p-5 cursor-pointer"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="space-y-1 min-w-0 max-w-[65%]">
-            <h4 className="text-base font-bold text-slate-900 break-words line-clamp-2 group-hover:line-clamp-none transition-all">
+            <h4 className={`text-base font-bold ${theme.colors.ui.text} break-words line-clamp-2 group-hover:line-clamp-none transition-all`}>
               {task.title}
             </h4>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className="text-[11px] font-bold text-slate-600 truncate max-w-[180px]">
+              <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[180px]`}>
                 {(draft?.owners || task.owners).map((id) => getUserName(id)).join(', ') ||
                   'Unassigned'}
               </p>
-              <p className="text-[11px] font-medium text-slate-400">Due {formatDue(draft?.dueAt || task.dueAt)}</p>
+              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(draft?.dueAt || task.dueAt)}</p>
             </div>
           </div>
 
-          <div className="shrink-0 flex flex-col items-end gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <div className="shrink-0 flex items-center gap-3">
+            <div className="flex items-center gap-1.5 justify-end">
               <span
-                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[75px] ${statusPills[derived]}`}
+                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[70px] ${statusPills[derived]}`}
               >
                 {statusLabels[derived]}
               </span>
-              {isRisk && (
-                <span className="rounded-full bg-rose-600 px-2 h-6 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
-                  <span className="w-1 h-1 bg-white rounded-full animate-ping" />
-                  AT RISK
-                </span>
-              )}
-              {dueSoon && !isRisk && !overdue && (
-                <span className="rounded-full bg-amber-500 px-2 h-6 text-[9px] font-black uppercase tracking-wider text-white flex items-center">
-                  SOON
-                </span>
-              )}
-            </div>
 
-            <div className="flex items-center gap-2">
-              {isRisk && (
+              {isRisk ? (
                 <button
                   type="button"
+                  title="Send email reminder to owners"
                   disabled={
                     (draft?.owners || task.owners).length === 0 || nudgeFeedback[task.id] === 'sending'
                   }
@@ -149,18 +138,18 @@ export const TaskCard = ({
                     e.stopPropagation()
                     onNudge(task)
                   }}
-                  className={`rounded-lg px-2 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[75px] ${
+                  className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[80px] shadow-sm ${
                     (draft?.owners || task.owners).length === 0
-                      ? 'bg-slate-50 border border-slate-200 text-slate-300 cursor-not-allowed'
+                      ? `${theme.colors.status.unassigned.bg} ${theme.colors.status.unassigned.border} ${theme.colors.status.unassigned.text} cursor-not-allowed`
                       : nudgeFeedback[task.id] === 'sent'
-                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                        ? theme.colors.action.nudge.sent
                         : nudgeFeedback[task.id] === 'error'
-                          ? 'bg-rose-50 border border-rose-200 text-rose-700'
-                          : 'bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100'
+                          ? theme.colors.action.nudge.error
+                          : theme.colors.action.nudge.idle
                   }`}
                 >
                   {nudgeFeedback[task.id] === 'sending' ? (
-                    <div className="w-2.5 h-2.5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-2 h-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : nudgeFeedback[task.id] === 'sent' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -207,44 +196,49 @@ export const TaskCard = ({
                     </svg>
                   )}
                   {nudgeFeedback[task.id] === 'sending'
-                    ? 'Sending...'
+                    ? 'SENDING...'
                     : nudgeFeedback[task.id] === 'sent'
-                      ? 'Sent!'
+                      ? 'SENT!'
                       : nudgeFeedback[task.id] === 'error'
-                        ? 'Error'
-                        : 'Nudge'}
+                        ? 'ERROR'
+                        : 'NUDGE'}
                 </button>
-              )}
-              <svg
-                className={`transition-transform duration-300 text-slate-400 ${
-                  expanded ? 'rotate-180' : ''
-                }`}
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              ) : dueSoon && !overdue ? (
+                <span className={`rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider flex items-center ${theme.colors.status.soon.pill}`}>
+                  SOON
+                </span>
+              ) : null}
             </div>
+
+            <svg
+              className={`transition-transform duration-300 text-slate-400 ${
+                expanded ? 'rotate-180' : ''
+              }`}
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-5 pb-6 pt-2 border-t border-slate-50 animate-in slide-in-from-top-2 duration-300">
+        <div className={`px-5 pb-6 pt-2 border-t ${theme.colors.ui.border} animate-in slide-in-from-top-2 duration-300`}>
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={isEditing ? handleDoneEdit : handleStartEdit}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
                 isEditing
-                  ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  ? `${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} hover:${theme.colors.action.primary.hover}`
+                  : `${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} hover:${theme.colors.action.secondary.hover}`
               }`}
             >
               <svg
@@ -269,7 +263,7 @@ export const TaskCard = ({
             <button
               type="button"
               onClick={() => onDeleteTask(task)}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${theme.colors.action.danger.bg} ${theme.colors.action.danger.text} hover:${theme.colors.action.danger.hover} transition-all`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -292,16 +286,16 @@ export const TaskCard = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
             <div className="space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Owners
               </p>
               <div
                 className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${
-                  isEditing ? 'border-slate-100 bg-slate-50' : 'border-transparent bg-white'
+                  isEditing ? `${theme.colors.ui.border} ${theme.colors.ui.background}` : 'border-transparent'
                 }`}
               >
                 {(draft?.owners || task.owners).length === 0 ? (
-                  <span className="text-[11px] font-bold text-slate-400 px-1 py-1">
+                  <span className={`text-[11px] font-bold ${theme.colors.ui.textLight} px-1 py-1`}>
                     Unassigned
                   </span>
                 ) : (
@@ -310,8 +304,8 @@ export const TaskCard = ({
                       key={ownerId}
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${
                         isEditing
-                          ? 'bg-white border border-slate-200 text-slate-700'
-                          : 'bg-slate-50 border border-transparent text-slate-600'
+                          ? `${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`
+                          : `${theme.colors.ui.background} border border-transparent ${theme.colors.ui.textMuted}`
                       }`}
                     >
                       {getUserName(ownerId)}
@@ -325,7 +319,7 @@ export const TaskCard = ({
                               })
                             }
                           }}
-                          className="text-slate-300 hover:text-rose-500 transition-colors"
+                          className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -357,7 +351,7 @@ export const TaskCard = ({
                         })
                       }
                     }}
-                    className="bg-transparent border-none text-[11px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
+                    className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
                   >
                     <option value="">+ Add</option>
                     {[
@@ -379,7 +373,7 @@ export const TaskCard = ({
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Status
               </p>
               {isEditing ? (
@@ -391,7 +385,7 @@ export const TaskCard = ({
                       setDraft({ ...draft, status: e.target.value as TaskStatus })
                     }
                   }}
-                  className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
                 >
                   <option value="unassigned">Unassigned</option>
                   <option value="not_started">Not Started</option>
@@ -399,14 +393,14 @@ export const TaskCard = ({
                   <option value="done">Done</option>
                 </select>
               ) : (
-                <div className="px-3 py-2.5 rounded-xl bg-white border-2 border-transparent text-[11px] font-black text-slate-700">
+                <div className={`px-3 py-2.5 rounded-xl border-2 border-transparent text-[11px] font-black ${theme.colors.ui.text}`}>
                   {statusLabels[derived]}
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Due Date
               </p>
               {isEditing ? (
@@ -418,10 +412,10 @@ export const TaskCard = ({
                       setDraft({ ...draft, dueAt: e.target.value })
                     }
                   }}
-                  className="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
+                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
                 />
               ) : (
-                <div className="px-3 py-2.5 rounded-xl bg-white border-2 border-transparent text-[11px] font-black text-slate-700">
+                <div className={`px-3 py-2.5 rounded-xl border-2 border-transparent text-[11px] font-black ${theme.colors.ui.text}`}>
                   {new Date(task.dueAt).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',
@@ -436,8 +430,8 @@ export const TaskCard = ({
 
           <div className="mt-6 space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-slate-400 rounded-full" />
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+              <div className={`w-1.5 h-6 ${theme.colors.ui.textLight} rounded-full opacity-50`} />
+              <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight}`}>
                 Task Description
               </p>
             </div>
@@ -449,26 +443,26 @@ export const TaskCard = ({
                     setDraft({ ...draft, description: e.target.value })
                   }
                 }}
-                className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
+                className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
                 placeholder="Add the main task description here..."
                 rows={3}
               />
             ) : (
-              <div className="w-full rounded-2xl bg-white p-4 text-xs font-medium text-slate-600 leading-relaxed border border-slate-50">
+              <div className={`w-full rounded-2xl p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed border ${theme.colors.ui.borderStrong}`}>
                 {task.description || (
-                  <span className="text-slate-300 italic">No description provided.</span>
+                  <span className={`${theme.colors.ui.textLight} italic`}>No description provided.</span>
                 )}
               </div>
             )}
           </div>
 
-          <div className="mt-8 space-y-6 pt-6 border-t border-slate-50">
+          <div className={`mt-8 space-y-6 pt-6 border-t ${theme.colors.ui.border}`}>
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+              <div className={`w-1.5 h-6 ${theme.colors.ui.text} rounded-full`} />
+              <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.text}`}>
                 Comments
               </p>
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-500">
+              <span className={`ml-2 px-2 py-0.5 rounded-full ${theme.colors.ui.background} text-[10px] font-black ${theme.colors.ui.textMuted}`}>
                 {task.comments?.length || 0}
               </span>
             </div>
@@ -479,10 +473,10 @@ export const TaskCard = ({
                   <div key={comment.id} className="group/comment space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-wider">
+                        <span className={`text-[10px] font-black ${theme.colors.ui.text} uppercase tracking-wider`}>
                           {getUserName(comment.authorId)}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-400">
+                        <span className={`text-[9px] font-bold ${theme.colors.ui.textLight}`}>
                           {new Date(comment.createdAt).toLocaleDateString(undefined, {
                             month: 'short',
                             day: 'numeric',
@@ -498,13 +492,13 @@ export const TaskCard = ({
                               setEditingCommentId(comment.id)
                               setEditingCommentText(comment.text)
                             }}
-                            className="text-[10px] font-black text-slate-400 hover:text-amber-600 uppercase tracking-widest"
+                            className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-amber-600 uppercase tracking-widest`}
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => onDeleteComment(task, comment.id)}
-                            className="text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest"
+                            className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-rose-600 uppercase tracking-widest`}
                           >
                             Delete
                           </button>
@@ -513,16 +507,16 @@ export const TaskCard = ({
                     </div>
                     {editingCommentId === comment.id ? (
                       <div className="space-y-2">
-                        <textarea
-                          value={editingCommentText}
-                          onChange={(e) => setEditingCommentText(e.target.value)}
-                          className="w-full rounded-xl border-2 border-amber-100 bg-white p-3 text-xs font-medium text-slate-700 focus:border-amber-400 focus:outline-none transition-all resize-none"
-                          rows={2}
-                        />
+                    <textarea
+                      value={editingCommentText}
+                      onChange={(e) => setEditingCommentText(e.target.value)}
+                      className={`w-full rounded-xl border-2 ${theme.colors.ui.input} p-3 text-xs font-medium focus:outline-none transition-all resize-none`}
+                      rows={2}
+                    />
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => setEditingCommentId(null)}
-                            className="px-3 py-1.5 text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+                            className={`px-3 py-1.5 text-[10px] font-black ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} uppercase tracking-widest`}
                           >
                             Cancel
                           </button>
@@ -538,15 +532,15 @@ export const TaskCard = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-2xl bg-slate-50 p-4 text-xs font-medium text-slate-600 leading-relaxed border border-transparent hover:border-slate-100 transition-all">
+                      <div className={`rounded-2xl ${theme.colors.ui.background} p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed border border-transparent hover:${theme.colors.ui.borderStrong} transition-all`}>
                         {comment.text}
                       </div>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center rounded-2xl border-2 border-dashed border-slate-100">
-                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                <div className={`py-8 text-center rounded-2xl border-2 border-dashed ${theme.colors.ui.border}`}>
+                  <p className={`text-[10px] font-black ${theme.colors.ui.textLight} uppercase tracking-widest`}>
                     No comments yet
                   </p>
                 </div>
@@ -557,7 +551,7 @@ export const TaskCard = ({
                   <textarea
                     value={newCommentText}
                     onChange={(e) => setNewCommentText(e.target.value)}
-                    className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 p-4 pr-24 text-xs font-medium text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
+                    className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 pr-24 text-xs font-medium focus:outline-none transition-all resize-none`}
                     placeholder="Add a comment..."
                     rows={2}
                   />
@@ -567,7 +561,7 @@ export const TaskCard = ({
                       onAddComment(task, newCommentText)
                       setNewCommentText('')
                     }}
-                    className="absolute right-3 bottom-3 px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all"
+                    className={`absolute right-3 bottom-3 px-4 py-2 rounded-xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} text-[10px] font-black uppercase tracking-widest ${theme.colors.action.primary.hover} disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 transition-all`}
                   >
                     Post
                   </button>
@@ -577,22 +571,22 @@ export const TaskCard = ({
           </div>
 
           {task.activity && task.activity.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-slate-50">
+            <div className={`mt-8 pt-6 border-t ${theme.colors.ui.border}`}>
               <button
                 onClick={() => setShowHistory(!showHistory)}
                 className="flex items-center justify-between w-full group"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                  <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.text}`}>
                     Activity History
                   </p>
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-500">
+                  <span className={`ml-2 px-2 py-0.5 rounded-full ${theme.colors.ui.background} text-[10px] font-black ${theme.colors.ui.textMuted}`}>
                     {task.activity.length}
                   </span>
                 </div>
                 <svg
-                  className={`transition-transform duration-300 text-slate-300 group-hover:text-slate-500 ${
+                  className={`transition-transform duration-300 ${theme.colors.ui.textLight} group-hover:${theme.colors.ui.textMuted} ${
                     showHistory ? 'rotate-180' : ''
                   }`}
                   xmlns="http://www.w3.org/2000/svg"
@@ -610,18 +604,18 @@ export const TaskCard = ({
               </button>
 
               {showHistory && (
-                <div className="mt-6 relative ml-0.5 space-y-6 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:bg-slate-100 animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className={`mt-6 relative ml-0.5 space-y-6 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:${theme.colors.ui.border} animate-in fade-in slide-in-from-top-4 duration-300`}>
                   {task.activity
                     .slice()
                     .reverse()
                     .map((item) => (
                       <div key={item.id} className="relative pl-8">
-                        <div className="absolute left-0 top-1.5 h-[16px] w-[16px] rounded-full border-2 border-white bg-slate-200 ring-4 ring-white" />
+                        <div className={`absolute left-0 top-1.5 h-[16px] w-[16px] rounded-full border-2 ${theme.colors.ui.surface} ${theme.colors.ui.borderStrong} ring-4 ${theme.colors.ui.surface}`} />
                         <div className="flex flex-col gap-1">
-                          <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
+                          <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} leading-relaxed`}>
                             {item.note}
                           </p>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                          <p className={`text-[9px] font-black ${theme.colors.ui.textLight} uppercase tracking-widest`}>
                             {new Date(item.at).toLocaleDateString(undefined, {
                               month: 'short',
                               day: 'numeric',

@@ -50,6 +50,14 @@ function App() {
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [filter, setFilter] = useState<FilterKey>('all')
   const [showDone, setShowDone] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('taskpulse-theme')
+      if (saved) return saved === 'dark'
+      return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  })
   const [memberNameInput, setMemberNameInput] = useState('')
   const [memberEmailInput, setMemberEmailInput] = useState('')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
@@ -411,6 +419,18 @@ function App() {
     }
   }, [currentUserId, activeProject, view])
 
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+      document.body.classList.add('dark')
+      localStorage.setItem('taskpulse-theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark')
+      localStorage.setItem('taskpulse-theme', 'light')
+    }
+  }, [darkMode])
+
   return (
     <>
       {resolvedView === 'login' && (
@@ -435,6 +455,8 @@ function App() {
           currentUserName={currentUserName}
           currentUserId={currentUserId}
           userProjects={userProjects}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
           onLogout={logout}
           onGoToCreate={handleGoToCreate}
           onGoToProject={handleGoToProject}
@@ -457,6 +479,8 @@ function App() {
           setFilter={setFilter}
           showDone={showDone}
           setShowDone={setShowDone}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
           tasksForView={tasksForView}
           expandedTasks={expandedTasks}
           setExpandedTasks={setExpandedTasks}

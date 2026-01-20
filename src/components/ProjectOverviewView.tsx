@@ -1,10 +1,13 @@
 import type { Project } from '../types'
 import { projectStats } from '../constants'
+import { theme } from '../theme'
 
 interface ProjectOverviewViewProps {
   currentUserName: string | null
   currentUserId: string | null
   userProjects: Project[]
+  darkMode: boolean
+  onToggleDarkMode: () => void
   onLogout: () => void
   onGoToCreate: () => void
   onGoToProject: (id: string) => void
@@ -15,30 +18,43 @@ export const ProjectOverviewView = ({
   currentUserName,
   currentUserId,
   userProjects,
+  darkMode,
+  onToggleDarkMode,
   onLogout,
   onGoToCreate,
   onGoToProject,
   onOpenDeleteModal,
 }: ProjectOverviewViewProps) => {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
+    <div className={`min-h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} pb-12 transition-colors duration-300`}>
       <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
         <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">TaskPulse</p>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-4xl font-black tracking-tight">
               {currentUserName ? `${currentUserName}'s Projects` : 'Your Projects'}
             </h1>
-            <p className="text-sm font-medium text-slate-500 max-w-md">
+            <p className={`text-sm font-medium ${theme.colors.ui.textMuted} max-w-md`}>
               A birds-eye view of all your group projects and their current status.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <button
+              onClick={onToggleDarkMode}
+              className={`p-3 rounded-2xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {darkMode ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              )}
+            </button>
             {currentUserId && (
               <button
                 type="button"
                 onClick={onLogout}
-                className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-rose-200 transition-all hover:bg-rose-700 hover:-translate-y-0.5 active:translate-y-0"
+                className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 transition-all hover:bg-rose-700 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -89,8 +105,8 @@ export const ProjectOverviewView = ({
         </header>
 
         {currentUserId && userProjects.length === 0 ? (
-          <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+          <section className={`rounded-[2.5rem] border-4 border-dashed ${theme.colors.ui.borderStrong} ${theme.colors.ui.surface} p-16 text-center`}>
+            <div className={`mx-auto w-16 h-16 rounded-2xl ${theme.colors.ui.background} flex items-center justify-center ${theme.colors.ui.textLight} mb-4`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="32"
@@ -107,13 +123,13 @@ export const ProjectOverviewView = ({
                 <path d="M9 21V9" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">No projects yet</h3>
-            <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
+            <h3 className={`text-xl font-bold ${theme.colors.ui.text}`}>No projects yet</h3>
+            <p className={`${theme.colors.ui.textMuted} max-w-xs mx-auto text-sm font-medium`}>
               Create your first project to start tracking tasks and coordinating with your team.
             </p>
             <button
               onClick={onGoToCreate}
-              className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
+              className={`mt-8 rounded-xl ${theme.colors.action.primary.bg} px-8 py-3 text-sm font-black ${theme.colors.action.primary.text} ${theme.colors.action.primary.hover} transition-all`}
             >
               Get Started
             </button>
@@ -125,17 +141,17 @@ export const ProjectOverviewView = ({
               return (
                 <div
                   key={project.id}
-                  className="group relative rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
+                  className={`group relative rounded-[2rem] border ${theme.colors.ui.borderStrong} ${theme.colors.ui.surface} p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/50 hover:-translate-y-1`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1 min-w-0">
-                      <h2 className="text-xl font-black text-slate-900 truncate tracking-tight">
+                      <h2 className={`text-xl font-black ${theme.colors.ui.text} truncate tracking-tight`}>
                         {project.name}
                       </h2>
                       {project.course && (
                         <p className="text-sm font-bold text-amber-600 truncate">{project.course}</p>
                       )}
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
+                      <p className={`text-xs font-bold ${theme.colors.ui.textLight} uppercase tracking-wider mt-1`}>
                         {project.tasks.length} tasks · {project.members.length} members
                       </p>
                     </div>
@@ -143,14 +159,14 @@ export const ProjectOverviewView = ({
                       <button
                         type="button"
                         onClick={() => onGoToProject(project.id)}
-                        className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
+                        className={`shrink-0 rounded-xl ${theme.colors.action.primary.bg} px-4 py-2 text-[11px] font-black ${theme.colors.action.primary.text} ${theme.colors.action.primary.hover} transition-colors`}
                       >
                         OPEN
                       </button>
                       <button
                         type="button"
                         onClick={() => onOpenDeleteModal(project)}
-                        className="shrink-0 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-100 transition-colors"
+                        className={`shrink-0 rounded-xl ${theme.colors.action.danger.bg} px-3 py-2 text-[11px] font-black ${theme.colors.action.danger.text} ${theme.colors.action.danger.hover} transition-colors`}
                         title="Delete Project"
                       >
                         <svg
@@ -173,15 +189,15 @@ export const ProjectOverviewView = ({
                   </div>
 
                   <div className="mt-6 grid grid-cols-2 gap-3">
-                    <div className="rounded-2xl bg-slate-50 p-3 border border-slate-100">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    <div className={`rounded-2xl ${theme.colors.ui.background} p-3 border ${theme.colors.ui.border}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>
                         Progress
                       </p>
                       <div className="mt-1 flex items-baseline gap-1">
-                        <p className="text-lg font-black text-slate-900">{stats.percentDone}%</p>
-                        <p className="text-[10px] font-bold text-slate-400">DONE</p>
+                        <p className={`text-lg font-black ${theme.colors.ui.text}`}>{stats.percentDone}%</p>
+                        <p className={`text-[10px] font-bold ${theme.colors.ui.textLight}`}>DONE</p>
                       </div>
-                      <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                      <div className={`mt-2 h-1.5 w-full rounded-full ${theme.colors.ui.borderStrong} overflow-hidden`}>
                         <div
                           className="h-full bg-emerald-500 transition-all duration-500"
                           style={{ width: `${stats.percentDone}%` }}
@@ -189,23 +205,23 @@ export const ProjectOverviewView = ({
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-amber-50 p-3 border border-amber-100">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">
+                    <div className={`rounded-2xl ${theme.colors.status.not_started.bg} p-3 border ${theme.colors.status.not_started.border}`}>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
                         Due Soon
                       </p>
-                      <p className="mt-1 text-lg font-black text-amber-900">{stats.dueSoon}</p>
-                      <p className="text-[10px] font-bold text-amber-700/60">NEXT 48H</p>
+                      <p className="mt-1 text-lg font-black text-amber-900 dark:text-amber-100">{stats.dueSoon}</p>
+                      <p className="text-[10px] font-bold text-amber-700/60 dark:text-amber-400/60">NEXT 48H</p>
                     </div>
 
-                    <div className="rounded-2xl bg-rose-50 p-3 border border-rose-100">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">
+                    <div className={`rounded-2xl ${theme.colors.status.overdue.bg} p-3 border ${theme.colors.status.overdue.border}`}>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
                         At Risk
                       </p>
-                      <p className="mt-1 text-lg font-black text-rose-900">{stats.atRisk}</p>
-                      <p className="text-[10px] font-bold text-rose-700/60">NOT STARTED</p>
+                      <p className="mt-1 text-lg font-black text-rose-900 dark:text-rose-100">{stats.atRisk}</p>
+                      <p className="text-[10px] font-bold text-rose-700/60 dark:text-rose-400/60">NOT STARTED</p>
                     </div>
 
-                    <div className="rounded-2xl bg-rose-900 p-3">
+                    <div className="rounded-2xl bg-rose-900 dark:bg-rose-950 p-3">
                       <p className="text-[10px] font-black uppercase tracking-wider text-rose-300">
                         Overdue
                       </p>
@@ -218,8 +234,8 @@ export const ProjectOverviewView = ({
             })}
           </section>
         ) : !currentUserId ? (
-          <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+          <section className={`rounded-[2.5rem] border-4 border-dashed ${theme.colors.ui.borderStrong} ${theme.colors.ui.surface} p-16 text-center`}>
+            <div className={`mx-auto w-16 h-16 rounded-2xl ${theme.colors.ui.background} flex items-center justify-center ${theme.colors.ui.textLight} mb-4`}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="32"
@@ -236,13 +252,13 @@ export const ProjectOverviewView = ({
                 <path d="M9 21V9" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Create your first project</h3>
-            <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
+            <h3 className={`text-xl font-bold ${theme.colors.ui.text}`}>Create your first project</h3>
+            <p className={`${theme.colors.ui.textMuted} max-w-xs mx-auto text-sm font-medium`}>
               Log in to create and manage your projects.
             </p>
             <button
               onClick={onGoToCreate}
-              className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
+              className={`mt-8 rounded-xl ${theme.colors.action.primary.bg} px-8 py-3 text-sm font-black ${theme.colors.action.primary.text} ${theme.colors.action.primary.hover} transition-all`}
             >
               Login to Create Projects
             </button>
