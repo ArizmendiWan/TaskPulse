@@ -51,6 +51,7 @@ function App() {
 
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [filter, setFilter] = useState<FilterKey>('all')
+  const [showDone, setShowDone] = useState(true)
   const [memberNameInput, setMemberNameInput] = useState('')
   const [memberEmailInput, setMemberEmailInput] = useState('')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
@@ -85,15 +86,23 @@ function App() {
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
-    const base = sortByDue(activeProject.tasks)
+    let base = sortByDue(activeProject.tasks)
+    
+    // Apply status filter first
     switch (filter) {
-      case 'mine': return filterMyTasks(base, currentUserId || null)
-      case 'dueSoon': return filterDueSoon(base)
-      case 'atRisk': return filterAtRisk(base)
-      case 'overdue': return filterOverdue(base)
-      default: return base
+      case 'mine': base = filterMyTasks(base, currentUserId || null); break
+      case 'dueSoon': base = filterDueSoon(base); break
+      case 'atRisk': base = filterAtRisk(base); break
+      case 'overdue': base = filterOverdue(base); break
     }
-  }, [activeProject, filter, currentUserId])
+
+    // Then filter out done tasks if needed
+    if (!showDone) {
+      return base.filter(t => t.status !== 'done')
+    }
+
+    return base
+  }, [activeProject, filter, currentUserId, showDone])
 
   // Handlers
   const handleGoToOverview = () => {
@@ -438,6 +447,8 @@ function App() {
           setMemberEmailInput={setMemberEmailInput}
           filter={filter}
           setFilter={setFilter}
+          showDone={showDone}
+          setShowDone={setShowDone}
           tasksForView={tasksForView}
           expandedTasks={expandedTasks}
           setExpandedTasks={setExpandedTasks}

@@ -17,6 +17,8 @@ interface ProjectDashboardViewProps {
   setMemberEmailInput: (value: string) => void
   filter: FilterKey
   setFilter: (filter: FilterKey) => void
+  showDone: boolean
+  setShowDone: (show: boolean) => void
   tasksForView: Task[]
   expandedTasks: Record<string, boolean>
   setExpandedTasks: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
@@ -53,6 +55,8 @@ export const ProjectDashboardView = ({
   setMemberEmailInput,
   filter,
   setFilter,
+  showDone,
+  setShowDone,
   tasksForView,
   expandedTasks,
   setExpandedTasks,
@@ -171,24 +175,48 @@ export const ProjectDashboardView = ({
             ) : (
               <div className="space-y-6 pb-20">
                 <div
-                  className="flex flex-wrap items-center gap-2"
-                  role="group"
-                  aria-label="task filters"
+                  className="flex flex-wrap items-center justify-between gap-4"
                 >
-                  {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setFilter(key)}
-                      className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
-                        filter === key
-                          ? 'bg-slate-900 text-white shadow-xl shadow-slate-200'
-                          : 'bg-white text-slate-500 hover:bg-slate-100 border-2 border-slate-100'
-                      }`}
-                    >
-                      {filterLabels[key].toUpperCase()}
-                    </button>
-                  ))}
+                  <div
+                    className="flex flex-wrap items-center gap-2"
+                    role="group"
+                    aria-label="task filters"
+                  >
+                    {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFilter(key)}
+                        className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
+                          filter === key
+                            ? 'bg-slate-900 text-white shadow-xl shadow-slate-200'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 border-2 border-slate-100'
+                        }`}
+                      >
+                        {filterLabels[key].toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setShowDone(!showDone)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-xs font-black uppercase tracking-widest ${
+                      !showDone
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-md border-2 flex items-center justify-center transition-all ${
+                      !showDone ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'
+                    }`}>
+                      {!showDone && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                    {showDone ? 'Hide Done' : 'Showing Active'}
+                  </button>
                 </div>
 
                 <div className="space-y-3">
