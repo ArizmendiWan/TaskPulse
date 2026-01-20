@@ -102,12 +102,6 @@ function App() {
 
   const [userCache, setUserCache] = useState<Record<string, User>>({})
 
-  // Fetch projects on load if logged in
-  useEffect(() => {
-    if (currentUserId && projects.length === 0 && view !== 'login') {
-      getUserProjects(currentUserId).then(setProjects).catch(console.error)
-    }
-  }, [currentUserId])
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
   const [loginForm, setLoginForm] = useState({ name: '', email: '' })
@@ -220,7 +214,7 @@ function App() {
   const resolvedView: 'overview' | 'project' | 'create' | 'login' =
     !currentUserId && view !== 'create'
       ? 'login'
-      : view === 'project' && !activeProject && !initialProjectId
+      : view === 'project' && !activeProject && !activeProjectId
         ? 'overview'
         : view
   const memberList = useMemo(
@@ -271,11 +265,18 @@ function App() {
     if (initialProjectId && !projects.find((p) => p.id === initialProjectId)) {
       const fetchProject = async () => {
         try {
+          console.log('[link-fetch] fetching project…', initialProjectId)
           const docRef = doc(db, 'projects', initialProjectId)
           const snap = await getDoc(docRef)
           if (snap.exists()) {
             const data = snap.data() as Project
-            setProjects((prev) => [...prev, data])
+            console.log('[link-fetch] project found', data.name)
+            setProjects((prev) => {
+              if (prev.find((p) => p.id === data.id)) return prev
+              return [...prev, data]
+            })
+          } else {
+            console.warn('[link-fetch] project not found in Firestore')
           }
         } catch (err) {
           console.error('Failed to fetch project from Firebase', err)
@@ -283,7 +284,21 @@ function App() {
       }
       fetchProject()
     }
-  }, [initialProjectId])
+  }, [initialProjectId, projects]) // Added projects to dependencies to re-run if projects is overwritten
+
+  // Auto-join project if visiting via link and logged in
+  useEffect(() => {
+    if (currentUserId && activeProject && !activeProject.members.includes(currentUserId)) {
+      console.log('[auto-join] adding logged-in user to project members', {
+        projectId: activeProject.id,
+        userId: currentUserId,
+      })
+      upsertProject((p) => ({
+        ...p,
+        members: ensureMemberList(p.members, currentUserId),
+      }))
+    }
+  }, [currentUserId, activeProject])
 
   useEffect(() => {
     if (!activeProjectId) return
@@ -297,8 +312,17 @@ function App() {
 
     const loadProjects = async () => {
       try {
-        const projects = await getUserProjects(currentUserId)
-        setProjects(projects)
+        const userProjects = await getUserProjects(currentUserId)
+        setProjects((prev) => {
+          // Merge user projects with current projects (like the one from initialProjectId)
+          const merged = [...prev]
+          userProjects.forEach((up) => {
+            if (!merged.some((p) => p.id === up.id)) {
+              merged.push(up)
+            }
+          })
+          return merged
+        })
       } catch (err) {
         console.error('Failed to load user projects:', err)
       }
@@ -398,7 +422,15 @@ function App() {
     if (currentUserId) {
       try {
         const userProjects = await getUserProjects(currentUserId)
-        setProjects(userProjects)
+        setProjects((prev) => {
+          const merged = [...prev]
+          userProjects.forEach((up) => {
+            if (!merged.some((p) => p.id === up.id)) {
+              merged.push(up)
+            }
+          })
+          return merged
+        })
 
         if (userProjects.length === 0) {
           console.log('No projects found for user:', currentUserId)
@@ -446,12 +478,11 @@ function App() {
 
       if (existingUser) {
         if (existingUser.name !== name) {
-          console.warn('[login] name mismatch', {
-            typedName: name,
-            existingName: existingUser.name,
+          console.log('[login] updating name for existing user', {
+            oldName: existingUser.name,
+            newName: name,
           })
-          setLoginError('Name does not match the existing user with this email.')
-          return
+          await saveUser({ ...existingUser, name, updatedAt: new Date().toISOString() })
         }
 
         console.log('User already exists, logging in:', existingUser.id)
@@ -461,14 +492,30 @@ function App() {
         console.log('[login] fetched projects', { count: userProjects.length })
 
         setCurrentUserId(existingUser.id)
-        setCurrentUserName(existingUser.name)
-        saveMemberInfo(existingUser.id, existingUser.name)
-        setProjects(userProjects)
+        setCurrentUserName(name) // Use the name provided in the form
+        saveMemberInfo(existingUser.id, name)
+        setProjects((prev) => {
+          const merged = [...prev]
+          userProjects.forEach((up) => {
+            if (!merged.some((p) => p.id === up.id)) {
+              merged.push(up)
+            }
+          })
+          return merged
+        })
         setLoginForm({ name: '', email: '' })
-        setView('overview')
-        setActiveProjectId(null)
-        const url = new URL(window.location.origin + '/')
-        window.history.replaceState({}, '', url.toString())
+        
+        console.log('[login] existing user redirection check', { initialProjectId })
+        if (initialProjectId) {
+          console.log('[login] redirecting existing user to project', initialProjectId)
+          goToProject(initialProjectId)
+        } else {
+          console.log('[login] redirecting existing user to overview')
+          setView('overview')
+          setActiveProjectId(null)
+          const url = new URL(window.location.origin + '/')
+          window.history.replaceState({}, '', url.toString())
+        }
       } else {
         const newUserId = uuid()
         const now = new Date().toISOString()
@@ -488,12 +535,20 @@ function App() {
         setCurrentUserId(newUserId)
         setCurrentUserName(name)
         saveMemberInfo(newUserId, name)
-        setProjects([])
+        // Keep existing projects (like the one fetched from initialProjectId)
         setLoginForm({ name: '', email: '' })
-        setView('overview')
-        setActiveProjectId(null)
-        const url = new URL(window.location.origin + '/')
-        window.history.replaceState({}, '', url.toString())
+        
+        console.log('[login] new user redirection check', { initialProjectId })
+        if (initialProjectId) {
+          console.log('[login] redirecting new user to project', initialProjectId)
+          goToProject(initialProjectId)
+        } else {
+          console.log('[login] redirecting new user to overview')
+          setView('overview')
+          setActiveProjectId(null)
+          const url = new URL(window.location.origin + '/')
+          window.history.replaceState({}, '', url.toString())
+        }
       }
     } catch (error) {
       console.error('[login] error:', error)
@@ -587,15 +642,15 @@ function App() {
 
       if (existingUser) {
         if (existingUser.name !== trimmed) {
-          console.warn('[join] name mismatch, using registered name', {
-            typedName: trimmed,
-            existingName: existingUser.name,
+          console.log('[join] updating name for existing user', {
+            oldName: existingUser.name,
+            newName: trimmed,
           })
-          setCurrentUserName(existingUser.name)
-        } else {
-          setCurrentUserName(trimmed)
+          await saveUser({ ...existingUser, name: trimmed, updatedAt: new Date().toISOString() })
         }
         setCurrentUserId(existingUser.id)
+        setCurrentUserName(trimmed)
+        saveMemberInfo(existingUser.id, trimmed)
         userId = existingUser.id
       } else {
         const newUser: User = {
@@ -1530,7 +1585,7 @@ function App() {
               </section>
             ) : (
               <div className="space-y-6 pb-20">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="task filters">
                   {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
                     <button
                       key={key}
@@ -1574,10 +1629,17 @@ function App() {
                                   : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
                             }`}
                           >
-                            <button
-                              type="button"
+                            <div
+                              role="button"
+                              tabIndex={0}
                               onClick={() => setExpandedTasks((prev) => ({ ...prev, [task.id]: !prev[task.id] }))}
-                              className="w-full text-left p-4 md:p-5"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setExpandedTasks((prev) => ({ ...prev, [task.id]: !prev[task.id] }))
+                                }
+                              }}
+                              className="w-full text-left p-4 md:p-5 cursor-pointer"
                             >
                               <div className="flex items-center justify-between gap-4">
                                 <div className="space-y-1 min-w-0">
@@ -1679,7 +1741,7 @@ function App() {
                                   </div>
                                 </div>
                               </div>
-                            </button>
+                            </div>
 
                             {expanded && (
                               <div className="px-5 pb-6 pt-2 border-t border-slate-50 animate-in slide-in-from-top-2 duration-300">
