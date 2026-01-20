@@ -43,6 +43,9 @@ interface ProjectDashboardViewProps {
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
   onNudge: (task: Task) => void
+  onLogout: () => void
+  onUpdateUserName: (newName: string) => Promise<void>
+  onTogglePin: (task: Task) => void
 }
 
 export const ProjectDashboardView = ({
@@ -83,6 +86,9 @@ export const ProjectDashboardView = ({
   onDeleteComment,
   onDeleteTask,
   onNudge,
+  onLogout,
+  onUpdateUserName,
+  onTogglePin,
 }: ProjectDashboardViewProps) => {
   return (
     <div className={`flex h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} overflow-hidden font-sans transition-colors duration-300`}>
@@ -102,6 +108,8 @@ export const ProjectDashboardView = ({
         onRemoveMember={onRemoveMember}
         onOpenDeleteModal={onOpenDeleteModal}
         onGoToOverview={onGoToOverview}
+        onLogout={onLogout}
+        onUpdateUserName={onUpdateUserName}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
@@ -263,6 +271,7 @@ export const ProjectDashboardView = ({
                         onDeleteComment={onDeleteComment}
                         onDeleteTask={onDeleteTask}
                         onNudge={onNudge}
+                        onTogglePin={onTogglePin}
                         getUserName={getUserName}
                         nudgeFeedback={nudgeFeedback}
                         projectMembers={activeProject.members}

@@ -33,6 +33,7 @@ export interface Task {
   status: TaskStatus
   activity: ActivityItem[]
   comments?: Comment[]
+  isPinned?: boolean
   createdAt: string
   updatedAt: string
 }

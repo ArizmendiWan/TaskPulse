@@ -17,6 +17,7 @@ interface TaskCardProps {
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
   onNudge: (task: Task) => void
+  onTogglePin: (task: Task) => void
   getUserName: (userId: string | null) => string
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   projectMembers: string[]
@@ -36,6 +37,7 @@ export const TaskCard = ({
   onDeleteComment,
   onDeleteTask,
   onNudge,
+  onTogglePin,
   getUserName,
   nudgeFeedback,
   projectMembers,
@@ -106,7 +108,7 @@ export const TaskCard = ({
         className="w-full text-left p-4 md:p-5 cursor-pointer"
       >
         <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0 max-w-[65%]">
+          <div className="space-y-1 min-w-0 flex-1 max-w-[65%]">
             <h4 className={`text-base font-bold ${theme.colors.ui.text} break-words line-clamp-2 group-hover:line-clamp-none transition-all`}>
               {task.title}
             </h4>
@@ -121,6 +123,21 @@ export const TaskCard = ({
 
           <div className="shrink-0 flex items-center gap-3">
             <div className="flex items-center gap-1.5 justify-end">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onTogglePin(task)
+                }}
+                className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                  task.isPinned
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
+                    : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-500'
+                }`}
+                title={task.isPinned ? 'Unpin task' : 'Pin task'}
+              >
+                <span className={`text-xs ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
+              </button>
+
               <span
                 className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[70px] ${statusPills[derived]}`}
               >

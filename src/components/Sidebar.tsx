@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type React from 'react'
 import type { Project } from '../types'
 import { theme } from '../theme'
@@ -18,6 +19,8 @@ interface SidebarProps {
   onRemoveMember: (memberId: string) => void
   onOpenDeleteModal: (project: Project) => void
   onGoToOverview: () => void
+  onLogout: () => void
+  onUpdateUserName: (newName: string) => Promise<void>
 }
 
 export const Sidebar = ({
@@ -36,7 +39,23 @@ export const Sidebar = ({
   onRemoveMember,
   onOpenDeleteModal,
   onGoToOverview,
+  onLogout,
+  onUpdateUserName,
 }: SidebarProps) => {
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [tempName, setTempName] = useState(currentUserName || '')
+
+  const handleStartEditName = () => {
+    setTempName(currentUserName || '')
+    setIsEditingName(true)
+  }
+
+  const handleSaveName = async () => {
+    if (tempName.trim() && tempName !== currentUserName) {
+      await onUpdateUserName(tempName.trim())
+    }
+    setIsEditingName(false)
+  }
   return (
     <aside
       className={`${
@@ -271,20 +290,35 @@ export const Sidebar = ({
                       My Profile
                     </p>
                     <div className="mt-3 flex items-center justify-between group">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                        <span className={`text-sm font-black ${theme.colors.ui.text} truncate`}>
-                          {currentUserName}
-                        </span>
+                        {isEditingName ? (
+                          <input
+                            autoFocus
+                            value={tempName}
+                            onChange={(e) => setTempName(e.target.value)}
+                            onBlur={handleSaveName}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveName()
+                              if (e.key === 'Escape') setIsEditingName(false)
+                            }}
+                            className={`flex-1 bg-transparent border-b-2 border-amber-400 text-sm font-black ${theme.colors.ui.text} outline-none px-0.5`}
+                          />
+                        ) : (
+                          <span className={`text-sm font-black ${theme.colors.ui.text} truncate`}>
+                            {currentUserName}
+                          </span>
+                        )}
                       </div>
-                      <button
-                        onClick={() => {
-                          setMemberNameInput('')
-                        }}
-                        className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-rose-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2`}
-                      >
-                        Reset
-                      </button>
+                      {!isEditingName && (
+                        <button
+                          onClick={handleStartEditName}
+                          className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-amber-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2`}
+                          title="Change your display name"
+                        >
+                          Change Name
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

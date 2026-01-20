@@ -17,12 +17,20 @@ export const useAuth = () => {
     saveMemberInfo(null, null)
   }
 
+  const updateName = (name: string) => {
+    setCurrentUserName(name)
+    if (currentUserId) {
+      saveMemberInfo(currentUserId, name)
+    }
+  }
+
   return {
     currentUserId,
     currentUserName,
     setCurrentUserName,
     login,
     logout,
+    updateName,
   }
 }
 

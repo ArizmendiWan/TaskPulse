@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import type React from 'react'
 import type { Project, Task, TaskStatus, User } from './types'
-import { getUserByEmail, saveUser } from './lib/userUtils'
+import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
 import { sendNudgeEmails } from './utilities/emailService'
 import {
   filterAtRisk,
@@ -31,7 +31,7 @@ function App() {
   const initialView: 'overview' | 'project' | 'create' | 'login' =
     window.location.pathname.endsWith('/new') ? 'create' : initialProjectId ? 'project' : 'overview'
 
-  const { currentUserId, currentUserName, login, logout } = useAuth()
+  const { currentUserId, currentUserName, login, logout, updateName } = useAuth()
   const {
     projects,
     setProjects,
@@ -48,8 +48,13 @@ function App() {
   const { userCache, setUserCache, getUserName } = useUserCache(projects)
 
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
-  const [filter, setFilter] = useState<FilterKey>('all')
-  const [showDone, setShowDone] = useState(true)
+  const [filter, setFilter] = useState<FilterKey>(() => {
+    return (localStorage.getItem('taskpulse-filter') as FilterKey) || 'all'
+  })
+  const [showDone, setShowDone] = useState(() => {
+    const saved = localStorage.getItem('taskpulse-showdone')
+    return saved === null ? true : saved === 'true'
+  })
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('taskpulse-theme')
@@ -107,13 +112,17 @@ function App() {
       base = base.filter((t) => t.status !== 'done')
     }
 
-    // Sort: 1. Active vs Done (done to the bottom), 2. Due Date (nearest first)
+    // Sort: 1. Pinned (top), 2. Active vs Done (done to the bottom), 3. Due Date (nearest first)
     return base.sort((a, b) => {
-      // 1. Status: done to the bottom
+      // 1. Pinned: top
+      if (a.isPinned && !b.isPinned) return -1
+      if (!a.isPinned && b.isPinned) return 1
+
+      // 2. Status: done to the bottom
       if (a.status === 'done' && b.status !== 'done') return 1
       if (a.status !== 'done' && b.status === 'done') return -1
 
-      // 2. Due Date: nearest first
+      // 3. Due Date: nearest first
       const timeA = new Date(a.dueAt).getTime()
       const timeB = new Date(b.dueAt).getTime()
       return timeA - timeB
@@ -220,11 +229,14 @@ function App() {
       const existingUser = await getUserByEmail(email)
       let userId: string
       if (existingUser) {
+        const updatedUser = { ...existingUser, name: trimmed, updatedAt: new Date().toISOString() }
         if (existingUser.name !== trimmed) {
-          await saveUser({ ...existingUser, name: trimmed, updatedAt: new Date().toISOString() })
+          await saveUser(updatedUser)
         }
         login(existingUser.id, trimmed)
         userId = existingUser.id
+        // Update local cache
+        setUserCache((prev) => ({ ...prev, [userId]: updatedUser }))
       } else {
         userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         const newUser: User = {
@@ -236,10 +248,28 @@ function App() {
         }
         await saveUser(newUser)
         login(userId, trimmed)
+        // Update local cache
+        setUserCache((prev) => ({ ...prev, [userId]: newUser }))
       }
       upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, userId) }))
       setMemberNameInput('')
       setMemberEmailInput('')
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleUpdateUserName = async (newName: string) => {
+    if (!currentUserId || !newName.trim()) return
+    try {
+      const user = await getUserById(currentUserId)
+      if (user) {
+        const updatedUser = { ...user, name: newName.trim(), updatedAt: new Date().toISOString() }
+        await saveUser(updatedUser)
+        updateName(newName.trim())
+        // Update the local cache immediately so the UI refreshes
+        setUserCache((prev) => ({ ...prev, [currentUserId]: updatedUser }))
+      }
     } catch (err) {
       console.error(err)
     }
@@ -375,13 +405,26 @@ function App() {
 
     try {
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
-      await sendNudgeEmails({ taskTitle: task.title, dueAt: due, recipientEmails: emails, senderName: currentUserName || 'Teammate' })
+      await sendNudgeEmails({
+        taskTitle: task.title,
+        dueAt: due,
+        recipientEmails: emails,
+        senderName: currentUserName || 'Teammate',
+      })
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     } catch (err) {
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'error' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     }
+  }
+
+  const handleToggleTaskPin = (task: Task) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      isPinned: !t.isPinned,
+      updatedAt: new Date().toISOString(),
+    }))
   }
 
   const handleOpenDeleteModal = (project: Project) => {
@@ -418,6 +461,14 @@ function App() {
       upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, currentUserId) }))
     }
   }, [currentUserId, activeProject, view])
+
+  useEffect(() => {
+    localStorage.setItem('taskpulse-filter', filter)
+  }, [filter])
+
+  useEffect(() => {
+    localStorage.setItem('taskpulse-showdone', String(showDone))
+  }, [showDone])
 
   useEffect(() => {
     if (darkMode) {
@@ -502,6 +553,9 @@ function App() {
           onDeleteComment={handleDeleteComment}
           onDeleteTask={handleDeleteTask}
           onNudge={handleNudge}
+          onLogout={logout}
+          onUpdateUserName={handleUpdateUserName}
+          onTogglePin={handleToggleTaskPin}
         />
       )}
 
