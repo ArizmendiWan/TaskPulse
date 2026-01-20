@@ -6,10 +6,8 @@ import { sendNudgeEmails } from './utilities/emailService'
 import {
   filterAtRisk,
   filterDueSoon,
-  filterMyTasks,
   filterOverdue,
   formatDue,
-  sortByDue,
 } from './lib/taskUtils'
 import {
   type FilterKey,
