@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { db } from '../lib/firebase'
 import type { User } from '../types'
 
 describe('Firebase User Storage', () => {

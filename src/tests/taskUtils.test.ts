@@ -9,7 +9,7 @@ import {
   isDueSoon,
   isOverdue,
   sortByDue,
-} from './taskUtils'
+} from '../lib/taskUtils'
 import type { Task } from '../types'
 
 const baseTask: Task = {
