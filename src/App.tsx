@@ -101,6 +101,7 @@ function App() {
   const [currentUserName, setCurrentUserName] = useState<string | null>(loadMemberName())
 
   const [userCache, setUserCache] = useState<Record<string, User>>({})
+  const [isLoadingProject, setIsLoadingProject] = useState(!!initialProjectId)
 
   const [filter, setFilter] = useState<FilterKey>('all')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
@@ -243,6 +244,7 @@ function App() {
 
     const docRef = doc(db, 'projects', activeProjectId)
     const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      setIsLoadingProject(false)
       if (snapshot.exists()) {
         const data = snapshot.data() as Project
         setProjects((prev) => {
@@ -280,6 +282,8 @@ function App() {
           }
         } catch (err) {
           console.error('Failed to fetch project from Firebase', err)
+        } finally {
+          setIsLoadingProject(false)
         }
       }
       fetchProject()
@@ -1624,7 +1628,14 @@ function App() {
 
         <div className="flex-1 overflow-y-auto px-4 pt-6 pb-12 md:px-12">
           <div className="max-w-4xl mx-auto space-y-6">
-            {!activeProject ? (
+            {isLoadingProject ? (
+              <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center mb-4">
+                  <div className="w-6 h-6 border-4 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+                <p className="text-sm font-black text-amber-600 uppercase tracking-widest">Loading project...</p>
+              </div>
+            ) : !activeProject ? (
               <section className="rounded-[3rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
                 <h3 className="text-2xl font-black text-slate-900">Project not found</h3>
                 <p className="mt-2 font-bold text-slate-400">The project link might be broken or expired.</p>
