@@ -482,13 +482,16 @@ function App() {
       console.log('[login] lookup result', existingUser)
 
       if (existingUser) {
+        let updatedUser = { ...existingUser }
         if (existingUser.name !== name) {
           console.log('[login] updating name for existing user', {
             oldName: existingUser.name,
             newName: name,
           })
-          await saveUser({ ...existingUser, name, updatedAt: new Date().toISOString() })
+          updatedUser = { ...existingUser, name, updatedAt: new Date().toISOString() }
+          await saveUser(updatedUser)
         }
+        setUserCache((prev) => ({ ...prev, [updatedUser.id]: updatedUser }))
 
         console.log('User already exists, logging in:', existingUser.id)
 
@@ -534,6 +537,7 @@ function App() {
 
         console.log('[login] creating new user…', newUser)
         await saveUser(newUser)
+        setUserCache((prev) => ({ ...prev, [newUserId]: newUser }))
 
         console.log('New user created:', newUserId)
 
@@ -1412,10 +1416,10 @@ function App() {
                                 key={memberId}
                                 className={`flex items-center justify-between gap-3 p-2 rounded-xl border-2 transition-all group/member ${
                                   isCurrentUser
-                                    ? 'bg-amber-50 border-amber-200 shadow-sm'
-                                    : 'bg-slate-50 border-transparent hover:border-slate-100'
-                                }`}
-                              >
+                                ? 'bg-amber-50 border-amber-200 shadow-sm'
+                                : 'bg-slate-50 border-transparent hover:border-slate-100'
+                            }`}
+                          >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <div
                                     className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
@@ -1423,17 +1427,17 @@ function App() {
                                     }`}
                                   >
                                     {memberName.charAt(0).toUpperCase()}
-                                  </div>
+                            </div>
                                   <div className="flex flex-col min-w-0">
-                                    <span className="text-sm font-bold text-slate-700 truncate">
+                            <span className="text-sm font-bold text-slate-700 truncate">
                                       {memberName} {isCurrentUser && '(You)'}
-                                    </span>
+                            </span>
                                     {isOwner && (
                                       <span className="text-[9px] font-black text-amber-600 uppercase tracking-wider">
                                         Project Owner
                                       </span>
                                     )}
-                                  </div>
+                          </div>
                                 </div>
                                 {canRemove && (
                                   <button
@@ -1689,28 +1693,28 @@ function App() {
                 </div>
 
                   <div className="space-y-3">
-                    {tasksForView.length === 0 ? (
-                      <div className="py-20 text-center rounded-[3rem] border-4 border-dashed border-slate-100">
-                        <p className="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">No tasks found</p>
+                  {tasksForView.length === 0 ? (
+                    <div className="py-20 text-center rounded-[3rem] border-4 border-dashed border-slate-100">
+                      <p className="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">No tasks found</p>
                         <p className="mt-1 text-xs font-bold text-slate-400">
                           Try adjusting your filters or add a task.
                         </p>
-                      </div>
-                    ) : (
-                      tasksForView.map((task) => {
-                        const derived = deriveStatus(task)
-                        const isRisk = isAtRisk(task)
-                        const overdue = isOverdue(task)
+                    </div>
+                  ) : (
+                    tasksForView.map((task) => {
+                      const derived = deriveStatus(task)
+                      const isRisk = isAtRisk(task)
+                      const overdue = isOverdue(task)
                         const dueSoon = isDueSoon(task)
                         const expanded = expandedTasks[task.id]
-
-                        return (
-                          <div
-                            key={task.id}
+                      
+                      return (
+                        <div
+                          key={task.id}
                             className={`group relative rounded-2xl border transition-all duration-300 ${
-                              overdue
+                            overdue 
                                 ? 'border-rose-100 bg-rose-50/10'
-                                : isRisk
+                              : isRisk 
                                   ? 'border-amber-100 bg-amber-50/10'
                                   : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
                             }`}
@@ -1740,20 +1744,20 @@ function App() {
                                       <span
                                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${statusPills[derived]}`}
                                       >
-                                        {statusLabels[derived]}
-                                      </span>
-                                      {isRisk && (
+                                    {statusLabels[derived]}
+                                  </span>
+                                  {isRisk && (
                                         <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
                                           <span className="w-1 h-1 bg-white rounded-full animate-ping" />
-                                          AT RISK
-                                        </span>
-                                      )}
+                                      AT RISK
+                                    </span>
+                                  )}
                                       {dueSoon && !isRisk && !overdue && (
                                         <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
                                           SOON
-                                        </span>
-                                      )}
-                                    </div>
+                                    </span>
+                                  )}
+                                </div>
                                   </div>
                                 </div>
 
@@ -1778,13 +1782,13 @@ function App() {
                                       <div className="h-7 w-7 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-[10px] font-black text-white">
                                         +{task.owners.length - 3}
                                       </div>
-                                    )}
-                                  </div>
+                                )}
+                              </div>
 
                                   <div className="flex items-center gap-2">
-                                    {isRisk && (
-                                      <button
-                                        type="button"
+                                {isRisk && (
+                                  <button
+                                    type="button"
                                         disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
                                         onClick={(e) => {
                                           e.stopPropagation()
@@ -1829,8 +1833,8 @@ function App() {
                                             : nudgeFeedback[task.id] === 'error'
                                               ? 'Error'
                                               : 'Nudge'}
-                                      </button>
-                                    )}
+                                  </button>
+                                )}
                                     <svg
                                       className={`transition-transform duration-300 text-slate-400 ${
                                         expanded ? 'rotate-180' : ''
@@ -1855,7 +1859,7 @@ function App() {
                             {expanded && (
                               <div className="px-5 pb-6 pt-2 border-t border-slate-50 animate-in slide-in-from-top-2 duration-300">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                                  <div className="space-y-2">
+                              <div className="space-y-2">
                                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                                       Owners
                                     </p>
@@ -1878,9 +1882,9 @@ function App() {
                                           </span>
                                         ))
                                       )}
-                                      <select
+                                <select
                                         value=""
-                                        onChange={(e) => handleOwnerChange(task, e.target.value)}
+                                  onChange={(e) => handleOwnerChange(task, e.target.value)}
                                         className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
                                       >
                                         <option value="">+ Add</option>
@@ -1897,45 +1901,45 @@ function App() {
                                               {getUserName(memberId)}
                                             </option>
                                           ))}
-                                      </select>
+                                </select>
                                     </div>
-                                  </div>
+                              </div>
 
-                                  <div className="space-y-2">
+                              <div className="space-y-2">
                                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                                       Status
                                     </p>
-                                    <select
+                                <select
                                       aria-label="Status"
-                                      value={task.status}
-                                      onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
+                                  value={task.status}
+                                  onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
                                       className="w-full rounded-xl border-2 border-slate-50 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                    >
-                                      <option value="unassigned">Unassigned</option>
+                                >
+                                  <option value="unassigned">Unassigned</option>
                                       <option value="not_started">Not Started</option>
-                                      <option value="in_progress">In Progress</option>
-                                      <option value="done">Done</option>
-                                    </select>
-                                  </div>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="done">Done</option>
+                                </select>
+                              </div>
 
-                                  <div className="space-y-2">
+                              <div className="space-y-2">
                                     <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
                                       Due Date
                                     </p>
-                                    <input
-                                      type="datetime-local"
-                                      value={task.dueAt}
-                                      onChange={(e) => handleDueChange(task, e.target.value)}
+                                <input
+                                  type="datetime-local"
+                                  value={task.dueAt}
+                                  onChange={(e) => handleDueChange(task, e.target.value)}
                                       className="w-full rounded-xl border-2 border-slate-50 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                    />
-                                  </div>
-                                </div>
+                                />
+                              </div>
+                            </div>
 
                                 <div className="mt-6 space-y-4">
                                   <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
-                                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
                                         Notes
                                       </p>
                                     </div>
@@ -1955,13 +1959,44 @@ function App() {
                                     rows={3}
                                   />
                                 </div>
+
+                                {task.activity && task.activity.length > 0 && (
+                                  <div className="mt-8 space-y-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+                                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                        Activity History
+                                      </p>
+                                    </div>
+                                    <div className="relative ml-0.5 space-y-4 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:bg-slate-100">
+                                      {task.activity.slice().reverse().map((item) => (
+                                        <div key={item.id} className="relative pl-6">
+                                          <div className="absolute left-0 top-1.5 h-[14px] w-[14px] rounded-full border-2 border-white bg-slate-200 ring-4 ring-white" />
+                                          <div className="flex flex-col gap-0.5">
+                                            <p className="text-[11px] font-bold text-slate-700 leading-relaxed">
+                                              {item.note}
+                                            </p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                              {new Date(item.at).toLocaleDateString(undefined, { 
+                                                month: 'short', 
+                                                day: 'numeric',
+                                                hour: 'numeric',
+                                                minute: '2-digit'
+                                              })}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                </div>
                               </div>
                             )}
                           </div>
-                        )
-                      })
-                    )}
-                  </div>
+                            )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             )}
           </div>
