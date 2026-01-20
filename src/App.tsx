@@ -1615,6 +1615,7 @@ function App() {
                         const derived = deriveStatus(task)
                         const isRisk = isAtRisk(task)
                         const overdue = isOverdue(task)
+                        const dueSoon = isDueSoon(task)
                         const expanded = expandedTasks[task.id]
 
                         return (
@@ -1659,6 +1660,11 @@ function App() {
                                         <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
                                           <span className="w-1 h-1 bg-white rounded-full animate-ping" />
                                           AT RISK
+                                        </span>
+                                      )}
+                                      {dueSoon && !isRisk && !overdue && (
+                                        <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+                                          SOON
                                         </span>
                                       )}
                                     </div>
