@@ -490,7 +490,6 @@ function App() {
           setLoginForm={setLoginForm}
           onLogin={handleLogin}
           loginError={loginError}
-          onGoToOverview={handleGoToOverview}
         />
       )}
       {resolvedView === 'create' && (

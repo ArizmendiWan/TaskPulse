@@ -6,7 +6,6 @@ interface LoginViewProps {
   setLoginForm: React.Dispatch<React.SetStateAction<{ name: string; email: string }>>
   onLogin: (e: React.FormEvent) => void
   loginError: string | null
-  onGoToOverview: () => void
 }
 
 export const LoginView = ({
@@ -14,7 +13,6 @@ export const LoginView = ({
   setLoginForm,
   onLogin,
   loginError,
-  onGoToOverview,
 }: LoginViewProps) => {
   return (
     <div className={`min-h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} pb-12 transition-colors duration-300`}>
@@ -69,29 +67,6 @@ export const LoginView = ({
             </button>
           </form>
         </section>
-
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={onGoToOverview}
-            className={`group inline-flex items-center gap-2 text-sm font-bold ${theme.colors.ui.textLight} hover:${theme.colors.ui.textMuted} transition-colors`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-            Back to Overview
-          </button>
-        </div>
       </div>
     </div>
   )
