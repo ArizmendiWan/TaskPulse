@@ -25,6 +25,7 @@ import { ProjectOverviewView } from './components/ProjectOverviewView'
 import { ProjectDashboardView } from './components/ProjectDashboardView'
 import { TaskCreationModal } from './components/TaskCreationModal'
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
+import { AiChatModal } from './components/AiChatModal'
 
 function App() {
   const initialProjectId = new URLSearchParams(window.location.search).get('projectId') ?? null
@@ -77,6 +78,7 @@ function App() {
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
+  const [aiOpen, setAiOpen] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
   const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})
 
@@ -554,6 +556,7 @@ function App() {
           onNudge={handleNudge}
           onUpdateUserName={handleUpdateUserName}
           onTogglePin={handleToggleTaskPin}
+          onOpenAI={() => setAiOpen(true)}
         />
       )}
 
@@ -579,6 +582,8 @@ function App() {
           onConfirm={handleExecuteDelete}
         />
       )}
+
+      <AiChatModal open={aiOpen} onClose={() => setAiOpen(false)} />
     </>
   )
 }
