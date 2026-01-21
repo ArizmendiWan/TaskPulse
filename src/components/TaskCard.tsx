@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Task, TaskStatus } from '../types'
 import { deriveStatus, isAtRisk, isOverdue, isDueSoon, formatDue } from '../lib/taskUtils'
 import { statusLabels, statusPills } from '../constants'
@@ -43,47 +43,20 @@ export const TaskCard = ({
   projectMembers,
   currentUserId,
 }: TaskCardProps) => {
-  const [isEditing, setIsEditing] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [draft, setDraft] = useState<Task | null>(null)
   const [newCommentText, setNewCommentText] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentText, setEditingCommentText] = useState('')
+  const [descriptionDraft, setDescriptionDraft] = useState(task.description)
 
-  const handleStartEdit = () => {
-    setDraft({ ...task })
-    setIsEditing(true)
-  }
+  useEffect(() => {
+    setDescriptionDraft(task.description)
+  }, [task.description])
 
-  const handleDoneEdit = () => {
-    if (!draft) return
-
-    // Compare and commit changes
-    if (draft.status !== task.status) {
-      onStatusChange(task, draft.status)
-    }
-    if (draft.dueAt !== task.dueAt) {
-      onDueChange(task, draft.dueAt)
-    }
-    if (draft.description !== task.description) {
-      onDescriptionChange(task, draft.description)
-    }
-    // Owners are a bit more complex since onOwnerChange handles toggling
-    // We'll compare the arrays and call onOwnerChange for each difference
-    const added = draft.owners.filter((o) => !task.owners.includes(o))
-    const removed = task.owners.filter((o) => !draft.owners.includes(o))
-    
-    added.forEach((o) => onOwnerChange(task, o))
-    removed.forEach((o) => onOwnerChange(task, o))
-
-    setIsEditing(false)
-    setDraft(null)
-  }
-
-  const derived = draft ? deriveStatus(draft) : deriveStatus(task)
-  const isRisk = isAtRisk(draft || task)
-  const overdue = isOverdue(draft || task)
-  const dueSoon = isDueSoon(draft || task)
+  const derived = deriveStatus(task)
+  const isRisk = isAtRisk(task)
+  const overdue = isOverdue(task)
+  const dueSoon = isDueSoon(task)
 
   return (
     <div
@@ -114,10 +87,9 @@ export const TaskCard = ({
             </h4>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[180px]`}>
-                {(draft?.owners || task.owners).map((id) => getUserName(id)).join(', ') ||
-                  'Unassigned'}
+                {task.owners.map((id) => getUserName(id)).join(', ') || 'Unassigned'}
               </p>
-              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(draft?.dueAt || task.dueAt)}</p>
+              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
             </div>
           </div>
 
@@ -148,15 +120,13 @@ export const TaskCard = ({
                 <button
                   type="button"
                   title="Send email reminder to owners"
-                  disabled={
-                    (draft?.owners || task.owners).length === 0 || nudgeFeedback[task.id] === 'sending'
-                  }
+                  disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
                   onClick={(e) => {
                     e.stopPropagation()
                     onNudge(task)
                   }}
                   className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[80px] shadow-sm ${
-                    (draft?.owners || task.owners).length === 0
+                    task.owners.length === 0
                       ? `${theme.colors.status.unassigned.bg} ${theme.colors.status.unassigned.border} ${theme.colors.status.unassigned.text} cursor-not-allowed`
                       : nudgeFeedback[task.id] === 'sent'
                         ? theme.colors.action.nudge.sent
@@ -251,33 +221,6 @@ export const TaskCard = ({
         <div className={`px-5 pb-6 pt-2 border-t ${theme.colors.ui.border} animate-in slide-in-from-top-2 duration-300`}>
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={isEditing ? handleDoneEdit : handleStartEdit}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
-                isEditing
-                  ? `${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} hover:${theme.colors.action.primary.hover}`
-                  : `${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} hover:${theme.colors.action.secondary.hover}`
-              }`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {isEditing ? (
-                  <path d="M20 6 9 17l-5-5" />
-                ) : (
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                )}
-              </svg>
-              {isEditing ? 'Done Editing' : 'Edit Task'}
-            </button>
-            <button
               type="button"
               onClick={() => onDeleteTask(task)}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${theme.colors.action.danger.bg} ${theme.colors.action.danger.text} hover:${theme.colors.action.danger.hover} transition-all`}
@@ -307,85 +250,66 @@ export const TaskCard = ({
                 Owners
               </p>
               <div
-                className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${
-                  isEditing ? `${theme.colors.ui.border} ${theme.colors.ui.background}` : 'border-transparent'
-                }`}
+                className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${theme.colors.ui.border} ${theme.colors.ui.background}`}
               >
-                {(draft?.owners || task.owners).length === 0 ? (
+                {task.owners.length === 0 ? (
                   <span className={`text-[11px] font-bold ${theme.colors.ui.textLight} px-1 py-1`}>
                     Unassigned
                   </span>
                 ) : (
-                  (draft?.owners || task.owners).map((ownerId) => (
+                  task.owners.map((ownerId) => (
                     <span
                       key={ownerId}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${
-                        isEditing
-                          ? `${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`
-                          : `${theme.colors.ui.background} border border-transparent ${theme.colors.ui.textMuted}`
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`}
                     >
                       {getUserName(ownerId)}
-                      {isEditing && (
-                        <button
-                          onClick={() => {
-                            if (draft) {
-                              setDraft({
-                                ...draft,
-                                owners: draft.owners.filter((o) => o !== ownerId)
-                              })
-                            }
-                          }}
-                          className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
+                      <button
+                        onClick={() => onOwnerChange(task, ownerId)}
+                        className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
+                        aria-label={`Remove ${getUserName(ownerId)}`}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="10"
-                            height="10"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M18 6 6 18" />
-                            <path d="m6 6 12 12" />
-                          </svg>
-                        </button>
-                      )}
+                          <path d="M18 6 6 18" />
+                          <path d="m6 6 12 12" />
+                        </svg>
+                      </button>
                     </span>
                   ))
                 )}
-                {isEditing && (
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (draft && e.target.value) {
-                        setDraft({
-                          ...draft,
-                          owners: [...draft.owners, e.target.value]
-                        })
-                      }
-                    }}
-                    className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
-                  >
-                    <option value="">+ Add</option>
-                    {[
-                      ...new Set(
-                        [...projectMembers, ...(currentUserId ? [currentUserId] : [])].filter(
-                          Boolean,
-                        ),
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      onOwnerChange(task, e.target.value)
+                    }
+                  }}
+                  className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
+                >
+                  <option value="">+ Add</option>
+                  {[
+                    ...new Set(
+                      [...projectMembers, ...(currentUserId ? [currentUserId] : [])].filter(
+                        Boolean,
                       ),
-                    ]
-                      .filter((m) => !(draft?.owners || task.owners).includes(m))
-                      .map((memberId) => (
-                        <option key={memberId} value={memberId}>
-                          {getUserName(memberId)}
-                        </option>
-                      ))}
-                  </select>
-                )}
+                    ),
+                  ]
+                    .filter((m) => !task.owners.includes(m))
+                    .map((memberId) => (
+                      <option key={memberId} value={memberId}>
+                        {getUserName(memberId)}
+                      </option>
+                    ))}
+                </select>
               </div>
             </div>
 
@@ -393,55 +317,29 @@ export const TaskCard = ({
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Status
               </p>
-              {isEditing ? (
-                <select
-                  aria-label="Status"
-                  value={draft?.status || task.status}
-                  onChange={(e) => {
-                    if (draft) {
-                      setDraft({ ...draft, status: e.target.value as TaskStatus })
-                    }
-                  }}
-                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
-                >
-                  <option value="unassigned">Unassigned</option>
-                  <option value="not_started">Not Started</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
-              ) : (
-                <div className={`px-3 py-2.5 rounded-xl border-2 border-transparent text-[11px] font-black ${theme.colors.ui.text}`}>
-                  {statusLabels[derived]}
-                </div>
-              )}
+              <select
+                aria-label="Status"
+                value={task.status}
+                onChange={(e) => onStatusChange(task, e.target.value as TaskStatus)}
+                className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
+              >
+                <option value="unassigned">Unassigned</option>
+                <option value="not_started">Not Started</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
             </div>
 
             <div className="space-y-2">
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Due Date
               </p>
-              {isEditing ? (
-                <input
-                  type="datetime-local"
-                  value={draft?.dueAt || task.dueAt}
-                  onChange={(e) => {
-                    if (draft) {
-                      setDraft({ ...draft, dueAt: e.target.value })
-                    }
-                  }}
-                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
-                />
-              ) : (
-                <div className={`px-3 py-2.5 rounded-xl border-2 border-transparent text-[11px] font-black ${theme.colors.ui.text}`}>
-                  {new Date(task.dueAt).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </div>
-              )}
+              <input
+                type="datetime-local"
+                value={task.dueAt}
+                onChange={(e) => onDueChange(task, e.target.value)}
+                className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
+              />
             </div>
           </div>
 
@@ -452,25 +350,18 @@ export const TaskCard = ({
                 Task Description
               </p>
             </div>
-            {isEditing ? (
-              <textarea
-                value={draft?.description || ''}
-                onChange={(e) => {
-                  if (draft) {
-                    setDraft({ ...draft, description: e.target.value })
-                  }
-                }}
-                className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
-                placeholder="Add the main task description here..."
-                rows={3}
-              />
-            ) : (
-              <div className={`w-full rounded-2xl p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed border ${theme.colors.ui.borderStrong}`}>
-                {task.description || (
-                  <span className={`${theme.colors.ui.textLight} italic`}>No description provided.</span>
-                )}
-              </div>
-            )}
+            <textarea
+              value={descriptionDraft}
+              onChange={(e) => setDescriptionDraft(e.target.value)}
+              onBlur={() => {
+                if (descriptionDraft.trim() !== task.description.trim()) {
+                  onDescriptionChange(task, descriptionDraft)
+                }
+              }}
+              className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
+              placeholder="Add the main task description here..."
+              rows={3}
+            />
           </div>
 
           <div className={`mt-8 space-y-6 pt-6 border-t ${theme.colors.ui.border}`}>
