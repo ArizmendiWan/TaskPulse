@@ -47,11 +47,44 @@ export const TaskCard = ({
   const [newCommentText, setNewCommentText] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentText, setEditingCommentText] = useState('')
+  
+  // Drafting System States
+  const [isEditing, setIsEditing] = useState(false)
+  const [statusDraft, setStatusDraft] = useState<TaskStatus>(task.status)
+  const [ownersDraft, setOwnersDraft] = useState<string[]>(task.owners)
+  const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
 
   useEffect(() => {
+    if (!isEditing) {
+      setStatusDraft(task.status)
+      setOwnersDraft(task.owners)
+      setDueAtDraft(task.dueAt)
+      setDescriptionDraft(task.description)
+    }
+  }, [task, isEditing])
+
+  const handleSaveDraft = () => {
+    if (statusDraft !== task.status) onStatusChange(task, statusDraft)
+    if (dueAtDraft !== task.dueAt) onDueChange(task, dueAtDraft)
+    if (descriptionDraft !== task.description) onDescriptionChange(task, descriptionDraft)
+    
+    // For owners, we calculate differences to use existing handlers
+    const removed = task.owners.filter(o => !ownersDraft.includes(o))
+    const added = ownersDraft.filter(o => !task.owners.includes(o))
+    removed.forEach(o => onOwnerChange(task, o))
+    added.forEach(o => onOwnerChange(task, o))
+    
+    setIsEditing(false)
+  }
+
+  const handleCancelDraft = () => {
+    setStatusDraft(task.status)
+    setOwnersDraft(task.owners)
+    setDueAtDraft(task.dueAt)
     setDescriptionDraft(task.description)
-  }, [task.description])
+    setIsEditing(false)
+  }
 
   const isRisk = isAtRisk(task)
   const overdue = isOverdue(task)
@@ -239,28 +272,58 @@ export const TaskCard = ({
       {expanded && (
         <div className={`px-5 pb-6 pt-2 border-t ${theme.colors.ui.border} animate-in slide-in-from-top-2 duration-300`}>
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => onDeleteTask(task)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${theme.colors.action.danger.bg} ${theme.colors.action.danger.text} hover:${theme.colors.action.danger.hover} transition-all`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-              Delete
-            </button>
+            {!isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                  Edit Task
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteTask(task)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${theme.colors.action.danger.bg} ${theme.colors.action.danger.text} hover:${theme.colors.action.danger.hover} transition-all shadow-sm`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                  Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleCancelDraft}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} transition-all`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Save Changes
+                </button>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
@@ -268,97 +331,108 @@ export const TaskCard = ({
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Owners
               </p>
-              <div
-                className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${theme.colors.ui.border} ${theme.colors.ui.background}`}
-              >
-                {task.owners.length === 0 ? (
-                  <span className={`text-[11px] font-bold ${theme.colors.ui.textLight} px-1 py-1`}>
-                    Unassigned
-                  </span>
-                ) : (
-                  task.owners.map((ownerId) => (
-                    <span
-                      key={ownerId}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`}
-                    >
-                      {getUserName(ownerId)}
-                      <button
-                        onClick={() => onOwnerChange(task, ownerId)}
-                        className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
-                        aria-label={`Remove ${getUserName(ownerId)}`}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M18 6 6 18" />
-                          <path d="m6 6 12 12" />
-                        </svg>
-                      </button>
-                    </span>
-                  ))
-                )}
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      onOwnerChange(task, e.target.value)
-                    }
-                  }}
-                  className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
+              {isEditing ? (
+                <div
+                  className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${theme.colors.ui.borderStrong} ${theme.colors.ui.background}`}
                 >
-                  <option value="">+ Add</option>
-                  {[
-                    ...new Set(
-                      [...projectMembers, ...(currentUserId ? [currentUserId] : [])].filter(
-                        Boolean,
+                  {ownersDraft.length === 0 ? (
+                    <span className={`text-[11px] font-bold ${theme.colors.ui.textLight} px-1 py-1`}>
+                      Unassigned
+                    </span>
+                  ) : (
+                    ownersDraft.map((ownerId) => (
+                      <span
+                        key={ownerId}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`}
+                      >
+                        {getUserName(ownerId)}
+                        <button
+                          onClick={() => setOwnersDraft(prev => prev.filter(o => o !== ownerId))}
+                          className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
+                          aria-label={`Remove ${getUserName(ownerId)}`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                        </button>
+                      </span>
+                    ))
+                  )}
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value && !ownersDraft.includes(e.target.value)) {
+                        setOwnersDraft(prev => [...prev, e.target.value])
+                      }
+                    }}
+                    className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
+                  >
+                    <option value="">+ Add</option>
+                    {[
+                      ...new Set(
+                        [...projectMembers, ...(currentUserId ? [currentUserId] : [])].filter(
+                          Boolean,
+                        ),
                       ),
-                    ),
-                  ]
-                    .filter((m) => !task.owners.includes(m))
-                    .map((memberId) => (
-                      <option key={memberId} value={memberId}>
-                        {getUserName(memberId)}
-                      </option>
-                    ))}
-                </select>
-              </div>
+                    ]
+                      .filter((m) => !ownersDraft.includes(m))
+                      .map((memberId) => (
+                        <option key={memberId} value={memberId}>
+                          {getUserName(memberId)}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="px-1 py-1">
+                  <p className={`text-[11px] font-bold ${theme.colors.ui.text}`}>
+                    {task.owners.map(id => getUserName(id)).join(', ') || 'No owners assigned'}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Status
               </p>
-              <select
-                aria-label="Status"
-                value={task.status}
-                onChange={(e) => onStatusChange(task, e.target.value as TaskStatus)}
-                className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
-              >
-                <option value="unassigned">Unassigned</option>
-                <option value="not_started">Not Started</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
+              {isEditing ? (
+                <select
+                  aria-label="Status"
+                  value={statusDraft}
+                  onChange={(e) => setStatusDraft(e.target.value as TaskStatus)}
+                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
+                >
+                  <option value="unassigned">Unassigned</option>
+                  <option value="not_started">Not Started</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              ) : (
+                <div className="px-1 py-1">
+                  <span className={`inline-flex items-center justify-center rounded-full px-2.5 h-6 text-[9px] font-black uppercase tracking-wider ${statusPills[task.status]}`}>
+                    {statusLabels[task.status]}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Due Date
               </p>
-              <input
-                type="datetime-local"
-                value={task.dueAt}
-                onChange={(e) => onDueChange(task, e.target.value)}
-                className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
-              />
+              {isEditing ? (
+                <input
+                  type="datetime-local"
+                  value={dueAtDraft}
+                  onChange={(e) => setDueAtDraft(e.target.value)}
+                  className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
+                />
+              ) : (
+                <div className="px-1 py-1">
+                  <p className={`text-[11px] font-bold ${theme.colors.ui.text}`}>
+                    {formatDue(task.dueAt)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -369,18 +443,19 @@ export const TaskCard = ({
                 Task Description
               </p>
             </div>
-            <textarea
-              value={descriptionDraft}
-              onChange={(e) => setDescriptionDraft(e.target.value)}
-              onBlur={() => {
-                if (descriptionDraft.trim() !== task.description.trim()) {
-                  onDescriptionChange(task, descriptionDraft)
-                }
-              }}
-              className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
-              placeholder="Add the main task description here..."
-              rows={3}
-            />
+            {isEditing ? (
+              <textarea
+                value={descriptionDraft}
+                onChange={(e) => setDescriptionDraft(e.target.value)}
+                className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
+                placeholder="Add the main task description here..."
+                rows={3}
+              />
+            ) : (
+              <div className={`w-full rounded-2xl bg-slate-50 dark:bg-slate-900/50 p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed min-h-[80px]`}>
+                {task.description || 'No description provided.'}
+              </div>
+            )}
           </div>
 
           <div className={`mt-8 space-y-6 pt-6 border-t ${theme.colors.ui.border}`}>
