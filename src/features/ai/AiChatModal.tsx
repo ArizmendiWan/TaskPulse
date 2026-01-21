@@ -2,13 +2,35 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { chatWithAI, type ChatMsg } from './service'
 import { theme } from '../../theme'
 
-export function AiChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [msgs, setMsgs] = useState<ChatMsg[]>([
-    { role: 'assistant', content: 'Hi! I am TaskPulse AI. How can I help you today?' },
+export function AiChatModal({
+  open,
+  onClose,
+  projectName,
+  contextHint,
+}: {
+  open: boolean
+  onClose: () => void
+  projectName?: string
+  contextHint?: string
+}) {
+  const [msgs, setMsgs] = useState<ChatMsg[]>(() => [
+    {
+      role: 'assistant',
+      content: `Hi! I'm your TaskPulse AI assistant${
+        projectName ? ` for “${projectName}”` : ''
+      }. How can I help you today?`,
+    },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  const systemHint = useMemo(() => {
+    const parts: string[] = []
+    if (projectName) parts.push(`Project: ${projectName}`)
+    if (contextHint) parts.push(contextHint)
+    return parts.join('\n')
+  }, [projectName, contextHint])
 
   const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading])
 
@@ -21,15 +43,27 @@ export function AiChatModal({ open, onClose }: { open: boolean; onClose: () => v
 
   async function send() {
     if (!canSend) return
-    const userMsg: ChatMsg = { role: 'user', content: input.trim() }
+    const text = input.trim()
+    const userMsg: ChatMsg = { role: 'user', content: text }
     const next = [...msgs, userMsg]
     setMsgs(next)
     setInput('')
     setLoading(true)
 
     try {
-      const text = await chatWithAI(next)
-      setMsgs((m) => [...m, { role: 'assistant', content: text || '(Empty response)' }])
+      // Keep last 20 messages
+      const windowed = next.slice(-20)
+
+      // Inject context into the request
+      const payload: ChatMsg[] = systemHint
+        ? [
+            { role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` },
+            ...windowed.slice(0, -1),
+          ]
+        : windowed
+
+      const reply = await chatWithAI(payload)
+      setMsgs((m) => [...m, { role: 'assistant', content: reply || '(Empty response)' }])
     } catch (e: any) {
       setMsgs((m) => [...m, { role: 'assistant', content: `Error: ${String(e?.message ?? e)}` }])
     } finally {

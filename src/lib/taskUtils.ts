@@ -21,6 +21,10 @@ export function isDueSoon(task: Task, now = new Date(), thresholdHours = 48): bo
 export function isAtRisk(task: Task, now = new Date()): boolean {
   if (task.status === 'done') return false
   const diffHours = (new Date(task.dueAt).getTime() - now.getTime()) / HOUR_MS
+  
+  // Overdue tasks are always at risk
+  if (diffHours < 0) return true
+
   const isDueSoonWindow = diffHours >= 0 && diffHours <= 48
   const isCriticalWindow = diffHours >= 0 && diffHours <= 24
   const notStarted = task.status === 'unassigned' || task.status === 'not_started'

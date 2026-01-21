@@ -77,16 +77,16 @@ describe('task utils', () => {
     expect(filterAtRisk(tasks)).toHaveLength(1)
   })
 
-  it('sorts tasks by due date descending (latest first)', () => {
+  it('sorts tasks by due date ascending (earliest first)', () => {
     const tasks: Task[] = [
       { ...baseTask, id: '1', dueAt: '2025-01-01T12:00' },
       { ...baseTask, id: '2', dueAt: '2025-01-05T12:00' },
       { ...baseTask, id: '3', dueAt: '2025-01-03T12:00' },
     ]
     const sorted = sortByDue(tasks)
-    expect(sorted[0].id).toBe('2') // Jan 5
+    expect(sorted[0].id).toBe('1') // Jan 1
     expect(sorted[1].id).toBe('3') // Jan 3
-    expect(sorted[2].id).toBe('1') // Jan 1
+    expect(sorted[2].id).toBe('2') // Jan 5
   })
 })
 

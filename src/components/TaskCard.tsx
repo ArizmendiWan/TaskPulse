@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Task, TaskStatus } from '../types'
-import { deriveStatus, isAtRisk, isOverdue, isDueSoon, formatDue } from '../lib/taskUtils'
+import { isAtRisk, isOverdue, isDueSoon, formatDue } from '../lib/taskUtils'
 import { statusLabels, statusPills } from '../constants'
 import { theme } from '../theme'
 
@@ -53,7 +53,6 @@ export const TaskCard = ({
     setDescriptionDraft(task.description)
   }, [task.description])
 
-  const derived = deriveStatus(task)
   const isRisk = isAtRisk(task)
   const overdue = isOverdue(task)
   const dueSoon = isDueSoon(task)
@@ -111,12 +110,32 @@ export const TaskCard = ({
               </button>
 
               <span
-                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[70px] ${statusPills[derived]}`}
+                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[70px] ${statusPills[task.status]}`}
               >
-                {statusLabels[derived]}
+                {statusLabels[task.status]}
               </span>
 
-              {isRisk ? (
+              {overdue ? (
+                <button
+                  type="button"
+                  title="Send email reminder to owners"
+                  disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onNudge(task)
+                  }}
+                  className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[80px] shadow-sm bg-rose-600 text-white hover:bg-rose-500 disabled:bg-rose-300`}
+                >
+                  {nudgeFeedback[task.id] === 'sending' ? (
+                    <div className="w-2 h-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : nudgeFeedback[task.id] === 'sent' ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
+                  )}
+                  {nudgeFeedback[task.id] === 'sending' ? 'SENDING...' : nudgeFeedback[task.id] === 'sent' ? 'SENT!' : 'OVERDUE'}
+                </button>
+              ) : isRisk ? (
                 <button
                   type="button"
                   title="Send email reminder to owners"

@@ -26,6 +26,7 @@ import { ProjectDashboardView } from './components/ProjectDashboardView'
 import { TaskCreationModal } from './components/TaskCreationModal'
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
 import { AiChatModal } from './features/ai/AiChatModal'
+import { generateAiContextHint } from './features/ai/utils'
 
 function App() {
   const initialProjectId = new URLSearchParams(window.location.search).get('projectId') ?? null
@@ -583,7 +584,21 @@ function App() {
         />
       )}
 
-      <AiChatModal open={aiOpen} onClose={() => setAiOpen(false)} />
+      <AiChatModal
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        projectName={activeProject?.name}
+        contextHint={
+          activeProject
+            ? generateAiContextHint(
+                activeProject,
+                currentUserName,
+                getUserName,
+                memberList
+              )
+            : undefined
+        }
+      />
     </>
   )
 }
