@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { chatWithAI, type ChatMsg } from '../utilities/aiService'
-import { theme } from '../theme'
+import { chatWithAI, type ChatMsg } from './service'
+import { theme } from '../../theme'
 
 export function AiChatWidget({
   projectName,
@@ -65,7 +65,7 @@ export function AiChatWidget({
 
       // Add project context to the first user message in this request if available
       const payload: ChatMsg[] = systemHint
-        ? [{ role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` }, ...windowed.slice(0, -1).slice(1)]
+        ? [{ role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` }, ...windowed.slice(0, -1)]
         : windowed
 
       const reply = await chatWithAI(payload)
@@ -96,7 +96,7 @@ export function AiChatWidget({
         <div className={`w-2 h-2 rounded-full ${busy ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
         {open ? 'CLOSE AI' : 'AI ASSISTANT'}
       </button>
-
+      
       {/* Chat Window */}
       {open && (
         <div className={`fixed bottom-28 right-8 z-50 w-[380px] max-w-[92vw] rounded-[2.5rem] ${theme.colors.ui.surface} border-2 ${theme.colors.ui.border} shadow-2xl overflow-hidden flex flex-col transition-all animate-in fade-in slide-in-from-bottom-4 duration-300`}>

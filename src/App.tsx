@@ -25,7 +25,7 @@ import { ProjectOverviewView } from './components/ProjectOverviewView'
 import { ProjectDashboardView } from './components/ProjectDashboardView'
 import { TaskCreationModal } from './components/TaskCreationModal'
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
-import { AiChatModal } from './components/AiChatModal'
+import { AiChatModal } from './features/ai/AiChatModal'
 
 function App() {
   const initialProjectId = new URLSearchParams(window.location.search).get('projectId') ?? null

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { chatWithAI, type ChatMsg } from '../utilities/aiService'
-import { theme } from '../theme'
+import { chatWithAI, type ChatMsg } from './service'
+import { theme } from '../../theme'
 
 export function AiChatModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [msgs, setMsgs] = useState<ChatMsg[]>([

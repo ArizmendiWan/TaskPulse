@@ -3,7 +3,8 @@ import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { theme } from '../theme'
 import { Sidebar } from './Sidebar'
 import { TaskCard } from './TaskCard'
-import { AiChatWidget } from './AiChatWidget'
+import { AiChatWidget } from '../features/ai/AiChatWidget'
+import { generateAiContextHint } from '../features/ai/utils'
 import type React from 'react'
 
 interface ProjectDashboardViewProps {
@@ -286,9 +287,12 @@ export const ProjectDashboardView = ({
 
         <AiChatWidget
           projectName={activeProject.name}
-          contextHint={`You are helping manage a student team project in TaskPulse.
-Keep answers short and actionable. If asked about tasks, suggest next steps and priorities.
-The current project is called "${activeProject.name}".`}
+          contextHint={generateAiContextHint(
+            activeProject,
+            currentUserName,
+            getUserName,
+            memberList
+          )}
         />
       </main>
     </div>
