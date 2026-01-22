@@ -45,7 +45,7 @@ export const DeleteConfirmationModal = ({
           value={deleteConfirmInput}
           onChange={(e) => setDeleteConfirmInput(e.target.value)}
           placeholder="Type the code exactly"
-          className={`mt-4 w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-4 py-3 font-mono text-sm font-black ${theme.colors.ui.text} focus:border-amber-400 focus:${theme.colors.ui.surface} outline-none transition-all`}
+          className={`mt-4 w-full rounded-xl border-2 px-4 py-3 font-mono text-sm font-black ${theme.colors.ui.input}`}
           autoFocus
         />
 

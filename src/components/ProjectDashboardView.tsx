@@ -1,3 +1,4 @@
+import React from 'react'
 import type { Project, Task, TaskStatus } from '../types'
 import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { theme } from '../theme'
@@ -5,7 +6,6 @@ import { Sidebar } from './Sidebar'
 import { TaskCard } from './TaskCard'
 import { AiChatWidget } from '../features/ai/AiChatWidget'
 import { generateAiContextHint } from '../features/ai/utils'
-import type React from 'react'
 
 interface ProjectDashboardViewProps {
   activeProject: Project
@@ -81,6 +81,14 @@ export const ProjectDashboardView = ({
   onUpdateUserName,
   onTogglePin,
 }: ProjectDashboardViewProps) => {
+  const [copyFeedback, setCopyFeedback] = React.useState(false)
+
+  const handleCopy = () => {
+    onCopyLink(projectShareLink(activeProject.id))
+    setCopyFeedback(true)
+    setTimeout(() => setCopyFeedback(false), 2000)
+  }
+
   return (
     <div className={`flex h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} overflow-hidden font-sans transition-colors duration-300`}>
       <Sidebar
@@ -121,26 +129,46 @@ export const ProjectDashboardView = ({
                 </p>
                 <button
                   type="button"
-                  onClick={() => onCopyLink(projectShareLink(activeProject.id))}
-                  className={`p-2 rounded-xl ${theme.colors.ui.background} border-2 border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} transition-all flex items-center gap-2`}
+                  onClick={handleCopy}
+                  className={`p-2 px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                    copyFeedback 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
+                      : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
+                  }`}
                   title="Copy Link"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                  </svg>
+                  {copyFeedback ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                    </svg>
+                  )}
                   <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">
-                    Copy Link
+                    {copyFeedback ? 'Copied!' : 'Copy Link'}
                   </span>
                 </button>
               </div>
