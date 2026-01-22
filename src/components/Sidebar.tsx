@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type React from 'react'
 import type { Project } from '../types'
 import { theme } from '../theme'
 
@@ -11,11 +10,6 @@ interface SidebarProps {
   currentUserName: string | null
   memberList: string[]
   getUserName: (userId: string | null) => string
-  memberNameInput: string
-  setMemberNameInput: (value: string) => void
-  memberEmailInput: string
-  setMemberEmailInput: (value: string) => void
-  onJoinProject: (e: React.FormEvent) => void
   onRemoveMember: (memberId: string) => void
   onOpenDeleteModal: (project: Project) => void
   onGoToOverview: () => void
@@ -30,11 +24,6 @@ export const Sidebar = ({
   currentUserName,
   memberList,
   getUserName,
-  memberNameInput,
-  setMemberNameInput,
-  memberEmailInput,
-  setMemberEmailInput,
-  onJoinProject,
   onRemoveMember,
   onOpenDeleteModal,
   onGoToOverview,
@@ -246,80 +235,42 @@ export const Sidebar = ({
               </div>
 
               <div className={`pt-4 border-t ${theme.colors.ui.border}`}>
-                {!currentUserId ? (
-                  <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight">
-                        Join the Team
-                      </h4>
-                      <p className="text-[11px] font-bold text-amber-800/70 dark:text-amber-400/70">
-                        Enter your name to start.
-                      </p>
-                    </div>
-                    <form className="space-y-2" onSubmit={onJoinProject}>
-                      <input
-                        required
-                        name="member-name"
-                        value={memberNameInput}
-                        onChange={(e) => setMemberNameInput(e.target.value)}
-                        className={`w-full rounded-xl border-2 border-amber-100 dark:border-amber-800 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-bold ${theme.colors.ui.text} focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20`}
-                        placeholder="Your name"
-                      />
-                      <input
-                        required
-                        id="member-email"
-                        type="email"
-                        value={memberEmailInput}
-                        onChange={(e) => setMemberEmailInput(e.target.value)}
-                        className={`w-full rounded-xl border-2 border-amber-100 dark:border-amber-800 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-bold ${theme.colors.ui.text} focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20`}
-                        placeholder="Your email"
-                      />
-                      <button
-                        type="submit"
-                        className="w-full rounded-xl bg-amber-600 px-3 py-2 text-xs font-black text-white hover:bg-amber-500 shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20 transition-all"
-                      >
-                        JOIN PROJECT
-                      </button>
-                    </form>
-                  </div>
-                ) : (
-                  <div className="p-1">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight}`}>
-                      My Profile
-                    </p>
-                    <div className="mt-3 flex items-center justify-between group">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                        {isEditingName ? (
-                          <input
-                            autoFocus
-                            value={tempName}
-                            onChange={(e) => setTempName(e.target.value)}
-                            onBlur={handleSaveName}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveName()
-                              if (e.key === 'Escape') setIsEditingName(false)
-                            }}
-                            className={`flex-1 bg-transparent border-b-2 border-amber-400 text-sm font-black ${theme.colors.ui.text} outline-none px-0.5`}
-                          />
-                        ) : (
-                          <span className={`text-sm font-black ${theme.colors.ui.text} truncate`}>
-                            {currentUserName}
-                          </span>
-                        )}
-                      </div>
-                      {!isEditingName && (
-                        <button
-                          onClick={handleStartEditName}
-                          className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-amber-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2`}
-                          title="Change your display name"
-                        >
-                          Change Name
-                        </button>
+                <div className="p-1">
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight}`}>
+                    My Profile
+                  </p>
+                  <div className="mt-3 flex items-center justify-between group">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      {isEditingName ? (
+                        <input
+                          autoFocus
+                          value={tempName}
+                          onChange={(e) => setTempName(e.target.value)}
+                          onBlur={handleSaveName}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveName()
+                            if (e.key === 'Escape') setIsEditingName(false)
+                          }}
+                          className={`flex-1 bg-transparent border-b-2 border-amber-400 text-sm font-black ${theme.colors.ui.text} outline-none px-0.5`}
+                        />
+                      ) : (
+                        <span className={`text-sm font-black ${theme.colors.ui.text} truncate`}>
+                          {currentUserName}
+                        </span>
                       )}
                     </div>
+                    {!isEditingName && (
+                      <button
+                        onClick={handleStartEditName}
+                        className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:text-amber-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2`}
+                        title="Change your display name"
+                      >
+                        Change Name
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </>
           )}

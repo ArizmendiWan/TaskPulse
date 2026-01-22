@@ -140,6 +140,11 @@ export const useProjects = (currentUserId: string | null, initialProjectId: stri
     await deleteDoc(doc(db, 'projects', id))
   }
 
+  const addProject = async (project: Project) => {
+    setProjects((prev) => [...prev, project])
+    await setDoc(doc(db, 'projects', project.id), project)
+  }
+
   return {
     projects,
     setProjects,
@@ -152,6 +157,7 @@ export const useProjects = (currentUserId: string | null, initialProjectId: stri
     upsertProject,
     upsertProjectAsyncById,
     deleteProject,
+    addProject,
   }
 }
 

@@ -25,6 +25,7 @@ import { ProjectOverviewView } from './components/ProjectOverviewView'
 import { ProjectDashboardView } from './components/ProjectDashboardView'
 import { TaskCreationModal } from './components/TaskCreationModal'
 import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
+import { InviteView } from './components/InviteView'
 import { AiChatModal } from './features/ai/AiChatModal'
 import { generateAiContextHint } from './features/ai/utils'
 
@@ -36,7 +37,6 @@ function App() {
   const { currentUserId, currentUserName, login, logout, updateName } = useAuth()
   const {
     projects,
-    setProjects,
     activeProjectId,
     setActiveProjectId,
     activeProject,
@@ -45,6 +45,7 @@ function App() {
     upsertProject,
     upsertProjectAsyncById,
     deleteProject,
+    addProject,
   } = useProjects(currentUserId, initialProjectId)
 
   const { userCache, setUserCache, getUserName } = useUserCache(projects)
@@ -65,8 +66,6 @@ function App() {
     }
     return false
   })
-  const [memberNameInput, setMemberNameInput] = useState('')
-  const [memberEmailInput, setMemberEmailInput] = useState('')
   const [newProject, setNewProject] = useState({ name: '', course: '' })
   const [loginForm, setLoginForm] = useState({ name: '', email: '' })
   const [loginError, setLoginError] = useState<string | null>(null)
@@ -91,12 +90,41 @@ function App() {
   const [deleteConfirmCode, setDeleteConfirmCode] = useState('')
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
 
-  const resolvedView = !currentUserId && view !== 'create' ? 'login' : view === 'project' && !activeProject && !activeProjectId ? 'overview' : view
+  const isMember = useMemo(() => {
+    if (!currentUserId || !activeProject) return false
+    return activeProject.members.includes(currentUserId)
+  }, [currentUserId, activeProject])
 
-  const memberList = useMemo(
-    () => (activeProject ? Array.from(new Set(activeProject.members.filter(Boolean))) : []),
-    [activeProject],
-  )
+  const resolvedView =
+    !currentUserId && (view === 'overview' || view === 'create')
+      ? 'login'
+      : view === 'project' && activeProject && !isMember
+        ? 'invite'
+        : view === 'project' && !activeProject && !activeProjectId
+          ? 'overview'
+          : view
+
+  const memberList = useMemo(() => {
+    if (!activeProject) return []
+    const ids = Array.from(new Set(activeProject.members.filter(Boolean).map((m) => m.trim())))
+
+    // Deduplicate by email if we have the data
+    const seenEmails = new Set<string>()
+    const uniqueIds: string[] = []
+
+    for (const id of ids) {
+      const email = userCache[id]?.email?.toLowerCase()
+      if (email) {
+        if (!seenEmails.has(email)) {
+          seenEmails.add(email)
+          uniqueIds.push(id)
+        }
+      } else {
+        uniqueIds.push(id)
+      }
+    }
+    return uniqueIds
+  }, [activeProject, userCache])
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
@@ -217,49 +245,9 @@ function App() {
       createdAt: new Date().toISOString(),
       ownerId: currentUserId || null,
     }
-    setProjects([...projects, created])
+    await addProject(created)
     handleGoToProject(id)
     setNewProject({ name: '', course: '' })
-  }
-
-  const handleJoinProject = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!activeProject || !memberNameInput.trim() || !memberEmailInput.trim()) return
-    const trimmed = memberNameInput.trim()
-    const email = memberEmailInput.trim().toLowerCase()
-
-    try {
-      const existingUser = await getUserByEmail(email)
-      let userId: string
-      if (existingUser) {
-        const updatedUser = { ...existingUser, name: trimmed, updatedAt: new Date().toISOString() }
-        if (existingUser.name !== trimmed) {
-          await saveUser(updatedUser)
-        }
-        login(existingUser.id, trimmed)
-        userId = existingUser.id
-        // Update local cache
-        setUserCache((prev) => ({ ...prev, [userId]: updatedUser }))
-      } else {
-        userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        const newUser: User = {
-          id: userId,
-          name: trimmed,
-          email,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        await saveUser(newUser)
-        login(userId, trimmed)
-        // Update local cache
-        setUserCache((prev) => ({ ...prev, [userId]: newUser }))
-      }
-      upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, userId) }))
-      setMemberNameInput('')
-      setMemberEmailInput('')
-    } catch (err) {
-      console.error(err)
-    }
   }
 
   const handleUpdateUserName = async (newName: string) => {
@@ -516,49 +504,131 @@ function App() {
           onOpenDeleteModal={handleOpenDeleteModal}
         />
       )}
-      {resolvedView === 'project' && activeProject && (
-        <ProjectDashboardView
-          activeProject={activeProject}
-          isLoadingProject={isLoadingProject}
+      {resolvedView === 'invite' && activeProject && (
+        <InviteView
+          project={activeProject}
           currentUserId={currentUserId}
           currentUserName={currentUserName}
-          memberList={memberList}
-          getUserName={getUserName}
-          memberNameInput={memberNameInput}
-          setMemberNameInput={setMemberNameInput}
-          memberEmailInput={memberEmailInput}
-          setMemberEmailInput={setMemberEmailInput}
-          filter={filter}
-          setFilter={setFilter}
-          showDone={showDone}
-          setShowDone={setShowDone}
-          darkMode={darkMode}
-          onToggleDarkMode={() => setDarkMode(!darkMode)}
-          tasksForView={tasksForView}
-          expandedTasks={expandedTasks}
-          setExpandedTasks={setExpandedTasks}
-          nudgeFeedback={nudgeFeedback}
-          showSidebar={showSidebar}
-          setShowSidebar={setShowSidebar}
-          onJoinProject={handleJoinProject}
-          onRemoveMember={handleRemoveMember}
-          onOpenDeleteModal={handleOpenDeleteModal}
-          onGoToOverview={handleGoToOverview}
-          onCopyLink={(link) => navigator.clipboard?.writeText(link)}
-          onShowTaskModal={() => setShowTaskModal(true)}
-          onStatusChange={handleStatusChange}
-          onOwnerChange={handleOwnerChange}
-          onDueChange={handleDueChange}
-          onDescriptionChange={handleDescriptionChange}
-          onAddComment={handleAddComment}
-          onUpdateComment={handleUpdateComment}
-          onDeleteComment={handleDeleteComment}
-          onDeleteTask={handleDeleteTask}
-          onNudge={handleNudge}
-          onUpdateUserName={handleUpdateUserName}
-          onTogglePin={handleToggleTaskPin}
-          onOpenAI={() => setAiOpen(true)}
+          loginError={loginError}
+          onJoin={async (name, emailInput) => {
+            setLoginError(null)
+            const email = emailInput.trim().toLowerCase()
+            try {
+              let userId: string
+              const existingUser = await getUserByEmail(email)
+              
+              if (existingUser) {
+                userId = existingUser.id
+                const updatedUser = { ...existingUser, name, updatedAt: new Date().toISOString() }
+                if (existingUser.name !== name) await saveUser(updatedUser)
+                setUserCache((prev) => ({ ...prev, [userId]: updatedUser }))
+              } else {
+                userId = uuid()
+                const newUser: User = {
+                  id: userId,
+                  name,
+                  email,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+                await saveUser(newUser)
+                setUserCache((prev) => ({ ...prev, [userId]: newUser }))
+              }
+              
+              // Join the project and clean up any old IDs with same email
+              await upsertProjectAsyncById(activeProject.id, (p) => {
+                const filtered = p.members.filter(mId => 
+                  mId === userId || userCache[mId]?.email?.toLowerCase() !== email
+                )
+                return { ...p, members: ensureMemberList(filtered, userId) }
+              })
+              
+              login(userId, name)
+            } catch (err) {
+              setLoginError('Failed to join project.')
+            }
+          }}
+          onConfirmJoin={async () => {
+            if (currentUserId && activeProject) {
+              const myEmail = userCache[currentUserId]?.email?.toLowerCase()
+              
+              await upsertProjectAsyncById(activeProject.id, (p) => {
+                const filtered = p.members.filter(mId => 
+                  mId === currentUserId || (myEmail && userCache[mId]?.email?.toLowerCase() !== myEmail)
+                )
+                return { ...p, members: ensureMemberList(filtered, currentUserId) }
+              })
+            }
+          }}
+          onSwitchUser={() => logout()}
+          onGoBack={handleGoToOverview}
         />
+      )}
+      {resolvedView === 'project' && (
+        activeProject ? (
+          <ProjectDashboardView
+            activeProject={activeProject}
+            isLoadingProject={isLoadingProject}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            memberList={memberList}
+            getUserName={getUserName}
+            filter={filter}
+            setFilter={setFilter}
+            showDone={showDone}
+            setShowDone={setShowDone}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            tasksForView={tasksForView}
+            expandedTasks={expandedTasks}
+            setExpandedTasks={setExpandedTasks}
+            nudgeFeedback={nudgeFeedback}
+            showSidebar={showSidebar}
+            setShowSidebar={setShowSidebar}
+            onRemoveMember={handleRemoveMember}
+            onOpenDeleteModal={handleOpenDeleteModal}
+            onGoToOverview={handleGoToOverview}
+            onCopyLink={(link) => navigator.clipboard?.writeText(link)}
+            onShowTaskModal={() => setShowTaskModal(true)}
+            onStatusChange={handleStatusChange}
+            onOwnerChange={handleOwnerChange}
+            onDueChange={handleDueChange}
+            onDescriptionChange={handleDescriptionChange}
+            onAddComment={handleAddComment}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
+            onDeleteTask={handleDeleteTask}
+            onNudge={handleNudge}
+            onUpdateUserName={handleUpdateUserName}
+            onTogglePin={handleToggleTaskPin}
+            onOpenAI={() => setAiOpen(true)}
+          />
+        ) : isLoadingProject ? (
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+            <div className="text-center space-y-4">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+              <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Loading Project...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+            <div className="text-center space-y-6 max-w-sm px-6">
+              <div className="text-6xl animate-bounce">🕵️‍♂️</div>
+              <div className="space-y-2">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase">Project Not Found</h2>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                  This project might have been deleted or the link is incorrect.
+                </p>
+              </div>
+              <button
+                onClick={handleGoToOverview}
+                className="w-full py-3 px-6 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-slate-200 dark:shadow-none"
+              >
+                Back to Overview
+              </button>
+            </div>
+          </div>
+        )
       )}
 
       {showTaskModal && (

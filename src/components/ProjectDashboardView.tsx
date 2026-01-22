@@ -14,10 +14,6 @@ interface ProjectDashboardViewProps {
   currentUserName: string | null
   memberList: string[]
   getUserName: (userId: string | null) => string
-  memberNameInput: string
-  setMemberNameInput: (value: string) => void
-  memberEmailInput: string
-  setMemberEmailInput: (value: string) => void
   filter: FilterKey
   setFilter: (filter: FilterKey) => void
   showDone: boolean
@@ -30,7 +26,6 @@ interface ProjectDashboardViewProps {
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   showSidebar: boolean
   setShowSidebar: (show: boolean) => void
-  onJoinProject: (e: React.FormEvent) => void
   onRemoveMember: (memberId: string) => void
   onOpenDeleteModal: (project: Project) => void
   onGoToOverview: () => void
@@ -57,10 +52,6 @@ export const ProjectDashboardView = ({
   currentUserName,
   memberList,
   getUserName,
-  memberNameInput,
-  setMemberNameInput,
-  memberEmailInput,
-  setMemberEmailInput,
   filter,
   setFilter,
   showDone,
@@ -73,7 +64,6 @@ export const ProjectDashboardView = ({
   nudgeFeedback,
   showSidebar,
   setShowSidebar,
-  onJoinProject,
   onRemoveMember,
   onOpenDeleteModal,
   onGoToOverview,
@@ -101,11 +91,6 @@ export const ProjectDashboardView = ({
         currentUserName={currentUserName}
         memberList={memberList}
         getUserName={getUserName}
-        memberNameInput={memberNameInput}
-        setMemberNameInput={setMemberNameInput}
-        memberEmailInput={memberEmailInput}
-        setMemberEmailInput={setMemberEmailInput}
-        onJoinProject={onJoinProject}
         onRemoveMember={onRemoveMember}
         onOpenDeleteModal={onOpenDeleteModal}
         onGoToOverview={onGoToOverview}
