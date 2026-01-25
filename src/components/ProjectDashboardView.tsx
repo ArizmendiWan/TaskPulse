@@ -32,7 +32,9 @@ interface ProjectDashboardViewProps {
   onCopyLink: (link: string) => void
   onShowTaskModal: () => void
   onStatusChange: (task: Task, next: TaskStatus) => void
-  onOwnerChange: (task: Task, ownerId: string) => void
+  onTakeTask: (task: Task) => void
+  onJoinTask: (task: Task) => void
+  onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
   onAddComment: (task: Task, text: string) => void
@@ -70,7 +72,9 @@ export const ProjectDashboardView = ({
   onCopyLink,
   onShowTaskModal,
   onStatusChange,
-  onOwnerChange,
+  onTakeTask,
+  onJoinTask,
+  onLeaveTask,
   onDueChange,
   onDescriptionChange,
   onAddComment,
@@ -192,7 +196,7 @@ export const ProjectDashboardView = ({
               onClick={onShowTaskModal}
               className="rounded-xl bg-emerald-600 px-5 md:px-8 py-3 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
             >
-              <span className="hidden sm:inline">ADD TASK</span>
+              <span className="hidden sm:inline">POST TASK</span>
               <span className="sm:hidden">+ TASK</span>
             </button>
           </div>
@@ -263,7 +267,7 @@ export const ProjectDashboardView = ({
                         No tasks found
                       </p>
                       <p className={`mt-1 text-xs font-bold ${theme.colors.ui.textMuted}`}>
-                        Try adjusting your filters or add a task.
+                        Try adjusting your filters or post a task.
                       </p>
                     </div>
                   ) : (
@@ -276,7 +280,9 @@ export const ProjectDashboardView = ({
                           setExpandedTasks((prev) => ({ ...prev, [id]: !prev[id] }))
                         }
                         onStatusChange={onStatusChange}
-                        onOwnerChange={onOwnerChange}
+                        onTakeTask={onTakeTask}
+                        onJoinTask={onJoinTask}
+                        onLeaveTask={onLeaveTask}
                         onDueChange={onDueChange}
                         onDescriptionChange={onDescriptionChange}
                         onAddComment={onAddComment}
@@ -287,7 +293,6 @@ export const ProjectDashboardView = ({
                         onTogglePin={onTogglePin}
                         getUserName={getUserName}
                         nudgeFeedback={nudgeFeedback}
-                        projectMembers={activeProject.members}
                         currentUserId={currentUserId}
                       />
                     ))
@@ -311,4 +316,3 @@ export const ProjectDashboardView = ({
     </div>
   )
 }
-

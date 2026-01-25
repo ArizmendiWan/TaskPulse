@@ -1,5 +1,4 @@
 import type React from 'react'
-import type { Project } from '../types'
 import { theme } from '../theme'
 
 interface TaskCreationModalProps {
@@ -7,21 +6,14 @@ interface TaskCreationModalProps {
     title: string
     description: string
     dueAt: string
-    owners: string[]
-    difficulty: string
   }
   setTaskForm: React.Dispatch<
     React.SetStateAction<{
       title: string
       description: string
       dueAt: string
-      owners: string[]
-      difficulty: string
     }>
   >
-  activeProject: Project | null
-  currentUserId: string | null
-  getUserName: (userId: string | null) => string
   onSubmit: (e: React.FormEvent) => void
   onClose: () => void
 }
@@ -29,9 +21,6 @@ interface TaskCreationModalProps {
 export const TaskCreationModal = ({
   taskForm,
   setTaskForm,
-  activeProject,
-  currentUserId,
-  getUserName,
   onSubmit,
   onClose,
 }: TaskCreationModalProps) => {
@@ -48,9 +37,9 @@ export const TaskCreationModal = ({
             <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600">
               TaskPulse
             </p>
-            <h3 className={`text-3xl font-black ${theme.colors.ui.text} tracking-tight`}>Add a Task</h3>
+            <h3 className={`text-3xl font-black ${theme.colors.ui.text} tracking-tight`}>Post a Task</h3>
             <p className={`text-sm font-bold ${theme.colors.ui.textMuted}`}>
-              Keep it clear so the team knows what to do.
+              Post a task for the team. Someone can pick it up.
             </p>
           </div>
           <button
@@ -94,7 +83,6 @@ export const TaskCreationModal = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <label
                 htmlFor="task-due"
@@ -111,58 +99,6 @@ export const TaskCreationModal = ({
                 onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
                 className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
               />
-            </div>
-            <div className="space-y-2">
-              <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
-                Difficulty
-              </label>
-              <select
-                name="task-difficulty"
-                value={taskForm.difficulty}
-                onChange={(e) => setTaskForm((t) => ({ ...t, difficulty: e.target.value }))}
-                className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-sm font-black focus:outline-none transition-all`}
-              >
-                <option value="">Select...</option>
-                <option value="S">S (Tiny)</option>
-                <option value="M">M (Medium)</option>
-                <option value="L">L (Big)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
-              Owners
-            </label>
-            <div className={`flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 ${theme.colors.ui.border} ${theme.colors.ui.background}`}>
-              {[
-                ...new Set(
-                  [...(activeProject?.members || []), ...(currentUserId ? [currentUserId] : [])].filter(
-                    Boolean,
-                  ),
-                ),
-              ].map((memberId) => (
-                <button
-                  key={memberId}
-                  type="button"
-                  onClick={() => {
-                    setTaskForm((t) => ({
-                      ...t,
-                      owners: t.owners.includes(memberId)
-                        ? t.owners.filter((o) => o !== memberId)
-                        : [...t.owners, memberId],
-                    }))
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                    taskForm.owners.includes(memberId)
-                      ? 'bg-amber-500 text-white shadow-md'
-                      : `${theme.colors.ui.surface} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.background} border border-slate-200 dark:border-slate-700`
-                  }`}
-                >
-                  {getUserName(memberId)}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">
@@ -175,8 +111,14 @@ export const TaskCreationModal = ({
               onChange={(e) => setTaskForm((t) => ({ ...t, description: e.target.value }))}
               rows={3}
               className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-sm font-black focus:outline-none transition-all resize-none`}
-              placeholder="Add some details..."
+              placeholder="Add some details about what needs to be done..."
             />
+          </div>
+
+          <div className={`rounded-2xl ${theme.colors.ui.background} p-4 border ${theme.colors.ui.border}`}>
+            <p className={`text-xs font-bold ${theme.colors.ui.textMuted} leading-relaxed`}>
+              💡 <span className="font-black">Tip:</span> After posting, any team member can take responsibility for this task and others can join to help.
+            </p>
           </div>
 
           <div className="flex gap-4 pt-4">
@@ -191,7 +133,7 @@ export const TaskCreationModal = ({
               type="submit"
               className={`flex-[1.5] rounded-[1.5rem] ${theme.colors.action.primary.bg} px-6 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl shadow-slate-200 dark:shadow-black/50 ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0 transition-all`}
             >
-              CREATE TASK
+              POST TASK
             </button>
           </div>
         </form>
@@ -199,4 +141,3 @@ export const TaskCreationModal = ({
     </div>
   )
 }
-

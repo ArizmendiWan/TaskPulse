@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   deriveStatus,
-  filterAtRisk,
   filterDueSoon,
   filterMyTasks,
-  filterOverdue,
-  isAtRisk,
+  filterOpen,
   isDueSoon,
+  isExpired,
   isOverdue,
   sortByDue,
 } from '../lib/taskUtils'
@@ -17,9 +16,10 @@ const baseTask: Task = {
   title: 'Sample',
   description: '',
   dueAt: '2025-01-02T00:00',
-  owners: [],
-  difficulty: '',
-  status: 'unassigned',
+  creatorId: 'creator1',
+  members: [],
+  takenBy: null,
+  status: 'open',
   activity: [],
   createdAt: '2025-01-01T00:00',
   updatedAt: '2025-01-01T00:00',
@@ -33,8 +33,14 @@ beforeEach(() => {
 })
 
 describe('task utils', () => {
-  it('detects overdue tasks', () => {
-    const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'not_started' }
+  it('detects expired tasks (open and past due)', () => {
+    const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'open' }
+    expect(isExpired(task)).toBe(true)
+    expect(deriveStatus(task)).toBe('expired')
+  })
+
+  it('detects overdue tasks (in_progress and past due)', () => {
+    const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'in_progress', takenBy: 'user1' }
     expect(isOverdue(task)).toBe(true)
     expect(deriveStatus(task)).toBe('overdue')
   })
@@ -44,37 +50,36 @@ describe('task utils', () => {
     expect(isDueSoon(task)).toBe(true)
   })
 
-  it('marks at risk when unstarted and due soon', () => {
-    const task: Task = { ...baseTask, dueAt: '2025-01-01T18:00', status: 'unassigned' }
-    expect(isAtRisk(task)).toBe(true)
+  it('does not mark done tasks as due soon', () => {
+    const task: Task = { ...baseTask, dueAt: '2025-01-01T12:00', status: 'done' }
+    expect(isDueSoon(task)).toBe(false)
   })
 
-  it('marks at risk when within 24h and not in progress', () => {
-    const task: Task = { ...baseTask, dueAt: '2025-01-01T10:00', status: 'not_started' }
-    expect(isAtRisk(task)).toBe(true)
-  })
-
-  it('does not mark at risk when in progress inside 24h window', () => {
-    const task: Task = { ...baseTask, dueAt: '2025-01-01T10:00', status: 'in_progress' }
-    expect(isAtRisk(task)).toBe(false)
-  })
-
-  it('filters by owner and overdue', () => {
+  it('filters by user involvement (creator, taker, or member)', () => {
     const tasks: Task[] = [
-      { ...baseTask, id: '1', owners: ['Alex'], status: 'not_started' },
-      { ...baseTask, id: '2', owners: ['Mei'], status: 'not_started', dueAt: '2024-12-30T00:00' },
+      { ...baseTask, id: '1', creatorId: 'Alex', status: 'open' },
+      { ...baseTask, id: '2', creatorId: 'other', takenBy: 'Mei', status: 'in_progress' },
+      { ...baseTask, id: '3', creatorId: 'other', members: ['Alex'], status: 'in_progress', takenBy: 'someone' },
     ]
-    expect(filterMyTasks(tasks, 'Alex')).toHaveLength(1)
-    expect(filterOverdue(tasks)).toHaveLength(1)
+    expect(filterMyTasks(tasks, 'Alex')).toHaveLength(2) // creator of 1, member of 3
+    expect(filterMyTasks(tasks, 'Mei')).toHaveLength(1) // taker of 2
   })
 
-  it('filters due soon and at risk collections', () => {
+  it('filters open tasks', () => {
     const tasks: Task[] = [
-      { ...baseTask, id: '1', dueAt: '2025-01-01T12:00', status: 'unassigned' },
-      { ...baseTask, id: '2', dueAt: '2025-02-01T12:00', status: 'not_started' },
+      { ...baseTask, id: '1', status: 'open' },
+      { ...baseTask, id: '2', status: 'in_progress', takenBy: 'user1' },
+      { ...baseTask, id: '3', status: 'open' },
+    ]
+    expect(filterOpen(tasks)).toHaveLength(2)
+  })
+
+  it('filters due soon tasks', () => {
+    const tasks: Task[] = [
+      { ...baseTask, id: '1', dueAt: '2025-01-01T12:00', status: 'open' },
+      { ...baseTask, id: '2', dueAt: '2025-02-01T12:00', status: 'open' },
     ]
     expect(filterDueSoon(tasks)).toHaveLength(1)
-    expect(filterAtRisk(tasks)).toHaveLength(1)
   })
 
   it('sorts tasks by due date ascending (earliest first)', () => {
@@ -89,4 +94,3 @@ describe('task utils', () => {
     expect(sorted[2].id).toBe('2') // Jan 5
   })
 })
-

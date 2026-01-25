@@ -2,14 +2,33 @@ import type { Task, TaskStatus } from '../types'
 
 const HOUR_MS = 1000 * 60 * 60
 
-export type DerivedStatus = TaskStatus | 'overdue'
+export type DerivedStatus = TaskStatus | 'overdue' | 'expired'
 
+/**
+ * A task is "expired" if it's still open (never taken) and past due date.
+ */
+export function isExpired(task: Task, now = new Date()): boolean {
+  return task.status === 'open' && new Date(task.dueAt).getTime() < now.getTime()
+}
+
+/**
+ * A task is "overdue" if it was taken (in_progress) but not completed by due date.
+ */
 export function isOverdue(task: Task, now = new Date()): boolean {
+  return task.status === 'in_progress' && new Date(task.dueAt).getTime() < now.getTime()
+}
+
+/**
+ * Check if task is past due (either expired or overdue).
+ */
+export function isPastDue(task: Task, now = new Date()): boolean {
   return task.status !== 'done' && new Date(task.dueAt).getTime() < now.getTime()
 }
 
 export function deriveStatus(task: Task, now = new Date()): DerivedStatus {
-  return isOverdue(task, now) ? 'overdue' : task.status
+  if (isExpired(task, now)) return 'expired'
+  if (isOverdue(task, now)) return 'overdue'
+  return task.status
 }
 
 export function isDueSoon(task: Task, now = new Date(), thresholdHours = 48): boolean {
@@ -22,15 +41,15 @@ export function isAtRisk(task: Task, now = new Date()): boolean {
   if (task.status === 'done') return false
   const diffHours = (new Date(task.dueAt).getTime() - now.getTime()) / HOUR_MS
   
-  // Overdue tasks are always at risk
+  // Past due tasks are always at risk
   if (diffHours < 0) return true
 
   const isDueSoonWindow = diffHours >= 0 && diffHours <= 48
   const isCriticalWindow = diffHours >= 0 && diffHours <= 24
-  const notStarted = task.status === 'unassigned' || task.status === 'not_started'
-  const notMoving = task.status !== 'in_progress'
+  const notTaken = task.status === 'open'
+  const notInProgress = task.status !== 'in_progress'
 
-  return (isDueSoonWindow && notStarted) || (isCriticalWindow && notMoving)
+  return (isDueSoonWindow && notTaken) || (isCriticalWindow && notInProgress)
 }
 
 export function formatDue(dueAt: string): string {
@@ -54,9 +73,13 @@ export function sortByDue(tasks: Task[]): Task[] {
   return [...pinned.sort(sortFn), ...active.sort(sortFn), ...done.sort(sortFn)]
 }
 
-export function filterMyTasks(tasks: Task[], owner: string | null): Task[] {
-  if (!owner) return []
-  return sortByDue(tasks.filter((t) => t.owners.includes(owner)))
+export function filterMyTasks(tasks: Task[], userId: string | null): Task[] {
+  if (!userId) return []
+  return sortByDue(tasks.filter((t) => t.members.includes(userId) || t.takenBy === userId || t.creatorId === userId))
+}
+
+export function filterOpen(tasks: Task[]): Task[] {
+  return sortByDue(tasks.filter((t) => t.status === 'open'))
 }
 
 export function filterDueSoon(tasks: Task[], now = new Date()): Task[] {

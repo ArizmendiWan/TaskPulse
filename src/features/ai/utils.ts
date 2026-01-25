@@ -10,7 +10,12 @@ export function generateAiContextHint(
   memberList: string[]
 ): string {
   const taskSummary = (project.tasks || [])
-    .map(t => `- [${t.status}] ${t.title} (Due: ${t.dueAt || 'No date'}, Owner: ${t.owners.map(id => getUserName(id)).join(', ') || 'Unassigned'})`)
+    .map(t => {
+      const takerInfo = t.takenBy ? `Taken by: ${getUserName(t.takenBy)}` : 'Open - No one has taken it'
+      const helpers = t.members.filter(m => m !== t.takenBy).map(id => getUserName(id))
+      const helperInfo = helpers.length > 0 ? `, Helpers: ${helpers.join(', ')}` : ''
+      return `- [${t.status}] ${t.title} (Due: ${t.dueAt || 'No date'}, ${takerInfo}${helperInfo})`
+    })
     .join('\n');
 
   return `You are an AI assistant for TaskPulse.

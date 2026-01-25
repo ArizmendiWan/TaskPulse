@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Task, TaskStatus } from '../types'
-import { isAtRisk, isOverdue, isDueSoon, formatDue } from '../lib/taskUtils'
+import { isOverdue, isExpired, isDueSoon, formatDue, deriveStatus } from '../lib/taskUtils'
 import { statusLabels, statusPills } from '../constants'
 import { theme } from '../theme'
 
@@ -9,7 +9,9 @@ interface TaskCardProps {
   expanded: boolean
   onToggleExpand: (taskId: string) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
-  onOwnerChange: (task: Task, ownerId: string) => void
+  onTakeTask: (task: Task) => void
+  onJoinTask: (task: Task) => void
+  onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
   onAddComment: (task: Task, text: string) => void
@@ -20,7 +22,6 @@ interface TaskCardProps {
   onTogglePin: (task: Task) => void
   getUserName: (userId: string | null) => string
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
-  projectMembers: string[]
   currentUserId: string | null
 }
 
@@ -29,7 +30,9 @@ export const TaskCard = ({
   expanded,
   onToggleExpand,
   onStatusChange,
-  onOwnerChange,
+  onTakeTask,
+  onJoinTask,
+  onLeaveTask,
   onDueChange,
   onDescriptionChange,
   onAddComment,
@@ -40,7 +43,6 @@ export const TaskCard = ({
   onTogglePin,
   getUserName,
   nudgeFeedback,
-  projectMembers,
   currentUserId,
 }: TaskCardProps) => {
   const [showHistory, setShowHistory] = useState(false)
@@ -51,14 +53,12 @@ export const TaskCard = ({
   // Drafting System States
   const [isEditing, setIsEditing] = useState(false)
   const [statusDraft, setStatusDraft] = useState<TaskStatus>(task.status)
-  const [ownersDraft, setOwnersDraft] = useState<string[]>(task.owners)
   const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
 
   useEffect(() => {
     if (!isEditing) {
       setStatusDraft(task.status)
-      setOwnersDraft(task.owners)
       setDueAtDraft(task.dueAt)
       setDescriptionDraft(task.description)
     }
@@ -68,207 +68,222 @@ export const TaskCard = ({
     if (statusDraft !== task.status) onStatusChange(task, statusDraft)
     if (dueAtDraft !== task.dueAt) onDueChange(task, dueAtDraft)
     if (descriptionDraft !== task.description) onDescriptionChange(task, descriptionDraft)
-    
-    // For owners, we calculate differences to use existing handlers
-    const removed = task.owners.filter(o => !ownersDraft.includes(o))
-    const added = ownersDraft.filter(o => !task.owners.includes(o))
-    removed.forEach(o => onOwnerChange(task, o))
-    added.forEach(o => onOwnerChange(task, o))
-    
     setIsEditing(false)
   }
 
   const handleCancelDraft = () => {
     setStatusDraft(task.status)
-    setOwnersDraft(task.owners)
     setDueAtDraft(task.dueAt)
     setDescriptionDraft(task.description)
     setIsEditing(false)
   }
 
-  const isRisk = isAtRisk(task)
+  const derivedStatus = deriveStatus(task)
+  const expired = isExpired(task)
   const overdue = isOverdue(task)
-  const dueSoon = isDueSoon(task)
+  const dueSoon = isDueSoon(task) && !expired && !overdue
+
+  // Simplified member model - all members are equal
+  const isUnclaimed = task.status === 'open'
+  const isMember = currentUserId ? task.members.includes(currentUserId) : false
+  const hasClaimed = task.members.length > 0
+  const canClaim = isUnclaimed && currentUserId && !expired
+  const canJoin = !isUnclaimed && currentUserId && !isMember && task.status !== 'done' && !expired
+  const canLeave = isMember && task.status !== 'done'
+
+  // Get member names for display
+  const memberNames = task.members.map(id => getUserName(id))
 
   return (
     <div
       className={`group relative rounded-2xl border transition-all duration-300 ${
-        overdue
-          ? 'border-rose-100 dark:border-rose-900/30 bg-rose-50/10 dark:bg-rose-900/10'
-          : isRisk
-            ? 'border-amber-100 dark:border-amber-900/30 bg-amber-50/10 dark:bg-amber-900/10'
-            : `${theme.colors.ui.border} ${theme.colors.ui.surface} hover:${theme.colors.ui.borderStrong} hover:shadow-md dark:hover:shadow-black/50`
+        expired
+          ? 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 opacity-75'
+          : overdue
+            ? 'border-rose-100 dark:border-rose-900/30 bg-rose-50/10 dark:bg-rose-900/10'
+            : dueSoon
+              ? 'border-amber-100 dark:border-amber-900/30 bg-amber-50/10 dark:bg-amber-900/10'
+              : `${theme.colors.ui.border} ${theme.colors.ui.surface} hover:${theme.colors.ui.borderStrong} hover:shadow-md dark:hover:shadow-black/50`
       }`}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onToggleExpand(task.id)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onToggleExpand(task.id)
-          }
-        }}
-        className="w-full text-left p-4 md:p-5 cursor-pointer"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0 flex-1 max-w-[65%]">
-            <h4 className={`text-base font-bold ${theme.colors.ui.text} break-words line-clamp-2 group-hover:line-clamp-none transition-all`}>
-              {task.title}
-            </h4>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[180px]`}>
-                {task.owners.map((id) => getUserName(id)).join(', ') || 'Unassigned'}
-              </p>
-              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
-            </div>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-3">
-            <div className="flex items-center gap-1.5 justify-end">
+      {/* Collapsed Header */}
+      <div className="p-4 md:p-5">
+        <div className="flex items-center justify-between gap-3">
+          {/* Left side: Task info */}
+          <div 
+            role="button"
+            tabIndex={0}
+            onClick={() => onToggleExpand(task.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onToggleExpand(task.id)
+              }
+            }}
+            className="flex-1 min-w-0 cursor-pointer"
+          >
+            <div className="flex items-center gap-2 mb-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   onTogglePin(task)
                 }}
-                className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                   task.isPinned
                     ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
                     : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-500'
                 }`}
                 title={task.isPinned ? 'Unpin task' : 'Pin task'}
               >
-                <span className={`text-xs ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
+                <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
+              <h4 className={`text-base font-bold ${theme.colors.ui.text} break-words line-clamp-1 group-hover:line-clamp-none transition-all`}>
+                {task.title}
+              </h4>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 ml-7">
+              <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[200px]`}>
+                {hasClaimed ? (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {memberNames.join(', ')}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400 font-black">Unclaimed</span>
+                )}
+              </p>
+              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
+            </div>
+          </div>
 
+          {/* Right side: All on one line - Status badges + Actions + Expand */}
+          <div className="shrink-0 flex items-center gap-2">
+            {/* Status badge - show IN PROGRESS or DONE only (not for unclaimed/expired/overdue) */}
+            {!isUnclaimed && !expired && !overdue && (
               <span
-                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider min-w-[70px] ${statusPills[task.status]}`}
+                className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider ${statusPills[task.status]}`}
               >
                 {statusLabels[task.status]}
               </span>
+            )}
 
-              {overdue ? (
-                <button
-                  type="button"
-                  title="Send email reminder to owners"
-                  disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onNudge(task)
-                  }}
-                  className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[80px] shadow-sm bg-rose-600 text-white hover:bg-rose-500 disabled:bg-rose-300`}
-                >
-                  {nudgeFeedback[task.id] === 'sending' ? (
-                    <div className="w-2 h-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : nudgeFeedback[task.id] === 'sent' ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
-                  )}
-                  {nudgeFeedback[task.id] === 'sending' ? 'SENDING...' : nudgeFeedback[task.id] === 'sent' ? 'SENT!' : 'OVERDUE'}
-                </button>
-              ) : isRisk ? (
-                <button
-                  type="button"
-                  title="Send email reminder to owners"
-                  disabled={task.owners.length === 0 || nudgeFeedback[task.id] === 'sending'}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onNudge(task)
-                  }}
-                  className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1.5 min-w-[80px] shadow-sm ${
-                    task.owners.length === 0
-                      ? `${theme.colors.status.unassigned.bg} ${theme.colors.status.unassigned.border} ${theme.colors.status.unassigned.text} cursor-not-allowed`
-                      : nudgeFeedback[task.id] === 'sent'
-                        ? theme.colors.action.nudge.sent
-                        : nudgeFeedback[task.id] === 'error'
-                          ? theme.colors.action.nudge.error
-                          : theme.colors.action.nudge.idle
-                  }`}
-                >
-                  {nudgeFeedback[task.id] === 'sending' ? (
-                    <div className="w-2 h-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : nudgeFeedback[task.id] === 'sent' ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : nudgeFeedback[task.id] === 'error' ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="10"
-                      height="10"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="m22 2-7 20-4-9-9-4Z" />
-                      <path d="M22 2 11 13" />
-                    </svg>
-                  )}
-                  {nudgeFeedback[task.id] === 'sending'
-                    ? 'SENDING...'
+            {/* Time-based badges - these replace the status badge when applicable */}
+            {expired ? (
+              <span className={`rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider flex items-center bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400`}>
+                EXPIRED
+              </span>
+            ) : overdue ? (
+              <button
+                type="button"
+                title="Send email reminder"
+                disabled={task.members.length === 0 || nudgeFeedback[task.id] === 'sending'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onNudge(task)
+                }}
+                className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1 shadow-sm bg-rose-600 text-white hover:bg-rose-500 disabled:bg-rose-300`}
+              >
+                {nudgeFeedback[task.id] === 'sending' ? '...' : nudgeFeedback[task.id] === 'sent' ? '✓ SENT' : 'OVERDUE'}
+              </button>
+            ) : dueSoon ? (
+              <button
+                type="button"
+                title={task.members.length === 0 ? 'No one to nudge yet' : 'Send email reminder'}
+                disabled={task.members.length === 0 || nudgeFeedback[task.id] === 'sending'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onNudge(task)
+                }}
+                className={`rounded-full px-2.5 h-6 text-[9px] font-black transition-all flex items-center justify-center gap-1 shadow-sm ${
+                  task.members.length === 0
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 cursor-default'
                     : nudgeFeedback[task.id] === 'sent'
-                      ? 'SENT!'
-                      : nudgeFeedback[task.id] === 'error'
-                        ? 'ERROR'
-                        : 'NUDGE'}
-                </button>
-              ) : dueSoon && !overdue ? (
-                <span className={`rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider flex items-center ${theme.colors.status.soon.pill}`}>
-                  SOON
-                </span>
-              ) : null}
-            </div>
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+              >
+                {nudgeFeedback[task.id] === 'sending' ? '...' : nudgeFeedback[task.id] === 'sent' ? '✓ SENT' : 'DUE SOON'}
+              </button>
+            ) : null}
 
-            <svg
-              className={`transition-transform duration-300 text-slate-400 ${
-                expanded ? 'rotate-180' : ''
-              }`}
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            {/* Action buttons */}
+            {task.status !== 'done' && !expired && (
+              <>
+                {canClaim && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onTakeTask(task)
+                    }}
+                    className={`inline-flex items-center justify-center rounded-lg py-1.5 text-[10px] font-black uppercase tracking-wide transition-all w-16 ${theme.colors.action.task.claim}`}
+                  >
+                    Claim
+                  </button>
+                )}
+                {canJoin && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onJoinTask(task)
+                    }}
+                    className={`inline-flex items-center justify-center rounded-lg py-1.5 text-[10px] font-black uppercase tracking-wide transition-all w-16 ${theme.colors.action.task.join}`}
+                  >
+                    Join
+                  </button>
+                )}
+                {isMember && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onStatusChange(task, 'done')
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${theme.colors.action.task.finish}`}
+                  >
+                    Finish
+                  </button>
+                )}
+                {canLeave && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onLeaveTask(task)
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${theme.colors.action.task.leave}`}
+                  >
+                    Leave
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Expand button */}
+            <button
+              onClick={() => onToggleExpand(task.id)}
+              className={`p-1 rounded-lg ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} transition-all`}
             >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
+              <svg
+                className={`transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Expanded Content */}
       {expanded && (
         <div className={`px-5 pb-6 pt-2 border-t ${theme.colors.ui.border} animate-in slide-in-from-top-2 duration-300`}>
           <div className="flex justify-end gap-2 pt-2">
@@ -277,10 +292,10 @@ export const TaskCard = ({
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm`}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-slate-700 text-white hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 transition-all shadow-sm`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  Edit Task
+                  Edit
                 </button>
                 <button
                   type="button"
@@ -320,96 +335,56 @@ export const TaskCard = ({
                   className="flex items-center gap-1.5 rounded-lg px-4 py-1.5 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  Save Changes
+                  Save
                 </button>
               </>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+            {/* Members Section */}
             <div className="space-y-2">
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
-                Owners
+                Members
               </p>
-              {isEditing ? (
-                <div
-                  className={`flex flex-wrap gap-1.5 min-h-[40px] p-2 rounded-xl border-2 transition-all ${theme.colors.ui.borderStrong} ${theme.colors.ui.background}`}
-                >
-                  {ownersDraft.length === 0 ? (
-                    <span className={`text-[11px] font-bold ${theme.colors.ui.textLight} px-1 py-1`}>
-                      Unassigned
-                    </span>
-                  ) : (
-                    ownersDraft.map((ownerId) => (
-                      <span
-                        key={ownerId}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black shadow-sm transition-all ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`}
+              <div className={`min-h-[40px] p-3 rounded-xl ${theme.colors.ui.background} border ${theme.colors.ui.border}`}>
+                {task.members.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {task.members.map(id => (
+                      <span 
+                        key={id}
+                        className={`inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} ${theme.colors.ui.text}`}
                       >
-                        {getUserName(ownerId)}
-                        <button
-                          onClick={() => setOwnersDraft(prev => prev.filter(o => o !== ownerId))}
-                          className={`${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
-                          aria-label={`Remove ${getUserName(ownerId)}`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                        </button>
+                        {getUserName(id)}
                       </span>
-                    ))
-                  )}
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value && !ownersDraft.includes(e.target.value)) {
-                        setOwnersDraft(prev => [...prev, e.target.value])
-                      }
-                    }}
-                    className={`bg-transparent border-none text-[11px] font-black ${theme.colors.ui.textLight} focus:outline-none cursor-pointer w-16`}
-                  >
-                    <option value="">+ Add</option>
-                    {[
-                      ...new Set(
-                        [...projectMembers, ...(currentUserId ? [currentUserId] : [])].filter(
-                          Boolean,
-                        ),
-                      ),
-                    ]
-                      .filter((m) => !ownersDraft.includes(m))
-                      .map((memberId) => (
-                        <option key={memberId} value={memberId}>
-                          {getUserName(memberId)}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="px-1 py-1">
-                  <p className={`text-[11px] font-bold ${theme.colors.ui.text}`}>
-                    {task.owners.map(id => getUserName(id)).join(', ') || 'No owners assigned'}
+                    ))}
+                  </div>
+                ) : (
+                  <p className={`text-[11px] font-bold ${theme.colors.ui.textLight} italic`}>
+                    No one has claimed this task yet
                   </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                 Status
               </p>
-              {isEditing ? (
+              {isEditing && task.members.length > 0 ? (
                 <select
                   aria-label="Status"
                   value={statusDraft}
                   onChange={(e) => setStatusDraft(e.target.value as TaskStatus)}
                   className={`w-full rounded-xl border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2.5 text-[11px] font-black ${theme.colors.ui.text} focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none transition-all`}
                 >
-                  <option value="unassigned">Unassigned</option>
-                  <option value="not_started">Not Started</option>
                   <option value="in_progress">In Progress</option>
                   <option value="done">Done</option>
                 </select>
               ) : (
                 <div className="px-1 py-1">
-                  <span className={`inline-flex items-center justify-center rounded-full px-2.5 h-6 text-[9px] font-black uppercase tracking-wider ${statusPills[task.status]}`}>
-                    {statusLabels[task.status]}
+                  <span className={`inline-flex items-center justify-center rounded-full px-2.5 h-6 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
+                    {statusLabels[derivedStatus]}
                   </span>
                 </div>
               )}
@@ -440,7 +415,7 @@ export const TaskCard = ({
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-6 ${theme.colors.ui.textLight} rounded-full opacity-50`} />
               <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight}`}>
-                Task Description
+                Description
               </p>
             </div>
             {isEditing ? (
@@ -448,14 +423,21 @@ export const TaskCard = ({
                 value={descriptionDraft}
                 onChange={(e) => setDescriptionDraft(e.target.value)}
                 className={`w-full rounded-2xl border-2 ${theme.colors.ui.input} p-4 text-xs font-bold focus:outline-none transition-all resize-none`}
-                placeholder="Add the main task description here..."
+                placeholder="Add description..."
                 rows={3}
               />
             ) : (
-              <div className={`w-full rounded-2xl bg-slate-50 dark:bg-slate-900/50 p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed min-h-[80px]`}>
+              <div className={`w-full rounded-2xl bg-slate-50 dark:bg-slate-900/50 p-4 text-xs font-medium ${theme.colors.ui.textMuted} leading-relaxed min-h-[60px]`}>
                 {task.description || 'No description provided.'}
               </div>
             )}
+          </div>
+
+          {/* Posted by */}
+          <div className={`mt-4 pt-4 border-t ${theme.colors.ui.border}`}>
+            <p className={`text-[10px] font-bold ${theme.colors.ui.textLight}`}>
+              Posted by <span className={theme.colors.ui.textMuted}>{getUserName(task.creatorId)}</span> on {new Date(task.createdAt).toLocaleDateString()}
+            </p>
           </div>
 
           <div className={`mt-8 space-y-6 pt-6 border-t ${theme.colors.ui.border}`}>
@@ -581,7 +563,7 @@ export const TaskCard = ({
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
                   <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.text}`}>
-                    Activity History
+                    Activity
                   </p>
                   <span className={`ml-2 px-2 py-0.5 rounded-full ${theme.colors.ui.background} text-[10px] font-black ${theme.colors.ui.textMuted}`}>
                     {task.activity.length}
@@ -637,5 +619,3 @@ export const TaskCard = ({
     </div>
   )
 }
-
-

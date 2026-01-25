@@ -17,7 +17,11 @@ export const useUserCache = (projects: Project[]) => {
       projects.forEach((project) => {
         project.members.forEach((memberId) => usersToFetch.add(memberId))
         project.tasks.forEach((task) => {
-          task.owners.forEach((ownerId) => usersToFetch.add(ownerId))
+          if (task.creatorId) usersToFetch.add(task.creatorId)
+          if (task.takenBy) usersToFetch.add(task.takenBy)
+          // Handle both new (members) and legacy (owners) task structure
+          const taskMembers = task.members || (task as unknown as { owners?: string[] }).owners || []
+          taskMembers.forEach((memberId) => usersToFetch.add(memberId))
         })
       })
 

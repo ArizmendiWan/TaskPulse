@@ -4,9 +4,8 @@ import type { Project, Task, TaskStatus, User } from './types'
 import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
 import { sendNudgeEmails } from './utilities/emailService'
 import {
-  filterAtRisk,
   filterDueSoon,
-  filterOverdue,
+  filterOpen,
   formatDue,
 } from './lib/taskUtils'
 import {
@@ -73,8 +72,6 @@ function App() {
     title: '',
     description: '',
     dueAt: '',
-    owners: [] as string[],
-    difficulty: '',
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
@@ -132,10 +129,19 @@ function App() {
 
     // Apply status filter
     switch (filter) {
-      case 'mine': base = base.filter((t) => t.owners.includes(currentUserId || '')); break
-      case 'dueSoon': base = base.filter((t) => filterDueSoon([t]).length > 0); break
-      case 'atRisk': base = base.filter((t) => filterAtRisk([t]).length > 0); break
-      case 'overdue': base = base.filter((t) => filterOverdue([t]).length > 0); break
+      case 'mine': 
+        base = base.filter((t) => 
+          t.members.includes(currentUserId || '') || 
+          t.takenBy === currentUserId || 
+          t.creatorId === currentUserId
+        )
+        break
+      case 'open': 
+        base = base.filter((t) => filterOpen([t]).length > 0)
+        break
+      case 'dueSoon': 
+        base = base.filter((t) => filterDueSoon([t]).length > 0)
+        break
     }
 
     // Filter out done tasks if needed
@@ -277,25 +283,24 @@ function App() {
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt) return
+    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt || !currentUserId) return
     const newTask: Task = {
       id: uuid(),
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
-      owners: taskForm.owners,
-      difficulty: (taskForm.difficulty as Task['difficulty']) || '',
-      status: taskForm.owners.length > 0 ? 'not_started' : 'unassigned',
-      activity: [createActivity('created', `Created by ${currentUserName || 'teammate'}`)],
+      creatorId: currentUserId,
+      members: [],
+      takenBy: null,
+      status: 'open',
+      activity: [createActivity('created', `Posted by ${currentUserName || 'teammate'}`)],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     upsertProject((p) => {
-      let members = p.members
-      taskForm.owners.forEach((o) => (members = ensureMemberList(members, o)))
-      return { ...p, members, tasks: [...p.tasks, newTask] }
+      return { ...p, tasks: [...p.tasks, newTask] }
     })
-    setTaskForm({ title: '', description: '', dueAt: '', owners: [], difficulty: '' })
+    setTaskForm({ title: '', description: '', dueAt: '' })
     setShowTaskModal(false)
   }
 
@@ -316,17 +321,47 @@ function App() {
     }))
   }
 
-  const handleOwnerChange = (task: Task, ownerId: string) => {
-    const isAlreadyOwner = task.owners.includes(ownerId)
-    const nextOwners = isAlreadyOwner ? task.owners.filter((o) => o !== ownerId) : [...task.owners, ownerId]
+  // "Claim" - first person to claim an unclaimed task
+  const handleTakeTask = (task: Task) => {
+    if (!currentUserId || task.status !== 'open') return
     handleUpdateTask(task.id, (t) => ({
       ...t,
-      owners: nextOwners,
-      status: nextOwners.length > 0 ? (t.status === 'unassigned' ? 'not_started' : t.status) : 'unassigned',
-      activity: [...t.activity, createActivity('owner_changed', isAlreadyOwner ? `Removed owner: ${getUserName(ownerId)}` : `Added owner: ${getUserName(ownerId)}`)],
+      members: [...t.members, currentUserId],
+      takenBy: currentUserId, // Keep for compatibility, but all members are equal
+      status: 'in_progress',
+      activity: [...t.activity, createActivity('task_taken', `${currentUserName || 'Someone'} claimed this task`)],
       updatedAt: new Date().toISOString(),
     }))
-    if (!isAlreadyOwner) upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, ownerId) }))
+  }
+
+  // "Join" - join a task that others have already claimed
+  const handleJoinTask = (task: Task) => {
+    if (!currentUserId || task.members.includes(currentUserId)) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      members: [...t.members, currentUserId],
+      activity: [...t.activity, createActivity('member_joined', `${currentUserName || 'Someone'} joined`)],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  // "Leave" - leave a task you're part of
+  const handleLeaveTask = (task: Task) => {
+    if (!currentUserId) return
+    handleUpdateTask(task.id, (t) => {
+      const newMembers = t.members.filter(m => m !== currentUserId)
+      // If no members left, task goes back to unclaimed (open)
+      const newStatus = newMembers.length === 0 ? 'open' : t.status
+      const newTakenBy = newMembers.length === 0 ? null : (t.takenBy === currentUserId ? newMembers[0] : t.takenBy)
+      return {
+        ...t,
+        members: newMembers,
+        takenBy: newTakenBy,
+        status: newStatus,
+        activity: [...t.activity, createActivity('member_left', `${currentUserName || 'Someone'} left`)],
+        updatedAt: new Date().toISOString(),
+      }
+    })
   }
 
   const handleDueChange = (task: Task, next: string) => {
@@ -389,9 +424,11 @@ function App() {
   }
 
   const handleNudge = async (task: Task) => {
-    if (task.owners.length === 0) return alert('Assign someone first!')
+    if (task.members.length === 0) return alert('No one has claimed this task yet!')
     const due = formatDue(task.dueAt)
-    const emails = task.owners.map((o) => userCache[o]?.email).filter(Boolean) as string[]
+    
+    // Get emails from all members
+    const emails = task.members.map((m) => userCache[m]?.email).filter(Boolean) as string[]
     if (emails.length === 0) return alert('No emails found!')
 
     try {
@@ -560,6 +597,7 @@ function App() {
               })
             }
           }}
+          onDeclineJoin={handleGoToOverview}
           onSwitchUser={() => logout()}
           onGoBack={handleGoToOverview}
         />
@@ -591,7 +629,9 @@ function App() {
             onCopyLink={(link) => navigator.clipboard?.writeText(link)}
             onShowTaskModal={() => setShowTaskModal(true)}
             onStatusChange={handleStatusChange}
-            onOwnerChange={handleOwnerChange}
+            onTakeTask={handleTakeTask}
+            onJoinTask={handleJoinTask}
+            onLeaveTask={handleLeaveTask}
             onDueChange={handleDueChange}
             onDescriptionChange={handleDescriptionChange}
             onAddComment={handleAddComment}
@@ -635,9 +675,6 @@ function App() {
         <TaskCreationModal
           taskForm={taskForm}
           setTaskForm={setTaskForm}
-          activeProject={activeProject}
-          currentUserId={currentUserId}
-          getUserName={getUserName}
           onSubmit={handleCreateTask}
           onClose={() => setShowTaskModal(false)}
         />

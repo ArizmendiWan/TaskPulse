@@ -2,30 +2,29 @@ import type { ActivityItem, Project } from './types'
 import { filterDueSoon, filterAtRisk, filterOverdue } from './lib/taskUtils'
 import { theme } from './theme'
 
-export type FilterKey = 'all' | 'mine' | 'dueSoon' | 'atRisk' | 'overdue'
+export type FilterKey = 'all' | 'mine' | 'open' | 'dueSoon'
 
 export const statusLabels: Record<string, string> = {
-  unassigned: 'Unassigned',
-  not_started: 'Not Started',
+  open: 'Unclaimed',
   in_progress: 'In Progress',
   done: 'Done',
+  expired: 'Expired',
   overdue: 'Overdue',
 }
 
 export const statusPills: Record<string, string> = {
-  unassigned: theme.colors.status.unassigned.pill,
-  not_started: theme.colors.status.not_started.pill,
+  open: theme.colors.status.unassigned.pill, // reuse unassigned style for open
   in_progress: theme.colors.status.in_progress.pill,
   done: theme.colors.status.done.pill,
+  expired: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
   overdue: theme.colors.status.overdue.pill,
 }
 
 export const filterLabels: Record<FilterKey, string> = {
   all: 'All',
   mine: 'My Tasks',
-  dueSoon: 'Due Soon (<48h)',
-  atRisk: 'At Risk',
-  overdue: 'Overdue',
+  open: 'Open',
+  dueSoon: 'Due Soon',
 }
 
 export function uuid() {
