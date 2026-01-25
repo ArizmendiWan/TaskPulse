@@ -545,7 +545,7 @@ export const TaskCard = ({
                       onAddComment(task, newCommentText)
                       setNewCommentText('')
                     }}
-                    className={`absolute right-3 bottom-3 px-4 py-2 rounded-xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} text-[10px] font-black uppercase tracking-widest ${theme.colors.action.primary.hover} disabled:bg-slate-200 dark:disabled:bg-slate-800 disabled:text-slate-400 transition-all`}
+                    className={`absolute right-3 bottom-3 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-300 dark:disabled:text-slate-600 transition-all`}
                   >
                     Post
                   </button>
