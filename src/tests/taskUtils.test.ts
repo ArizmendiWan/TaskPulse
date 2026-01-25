@@ -55,14 +55,14 @@ describe('task utils', () => {
     expect(isDueSoon(task)).toBe(false)
   })
 
-  it('filters by user involvement (creator, taker, or member)', () => {
+  it('filters by membership only (not creator or taker)', () => {
     const tasks: Task[] = [
-      { ...baseTask, id: '1', creatorId: 'Alex', status: 'open' },
-      { ...baseTask, id: '2', creatorId: 'other', takenBy: 'Mei', status: 'in_progress' },
-      { ...baseTask, id: '3', creatorId: 'other', members: ['Alex'], status: 'in_progress', takenBy: 'someone' },
+      { ...baseTask, id: '1', creatorId: 'Alex', status: 'open' }, // Alex created but not member
+      { ...baseTask, id: '2', creatorId: 'other', takenBy: 'Mei', members: ['Mei'], status: 'in_progress' },
+      { ...baseTask, id: '3', creatorId: 'other', members: ['Alex', 'Mei'], status: 'in_progress', takenBy: 'someone' },
     ]
-    expect(filterMyTasks(tasks, 'Alex')).toHaveLength(2) // creator of 1, member of 3
-    expect(filterMyTasks(tasks, 'Mei')).toHaveLength(1) // taker of 2
+    expect(filterMyTasks(tasks, 'Alex')).toHaveLength(1) // only member of task 3
+    expect(filterMyTasks(tasks, 'Mei')).toHaveLength(2) // member of tasks 2 and 3
   })
 
   it('filters open tasks', () => {

@@ -130,11 +130,8 @@ function App() {
     // Apply status filter
     switch (filter) {
       case 'mine': 
-        base = base.filter((t) => 
-          t.members.includes(currentUserId || '') || 
-          t.takenBy === currentUserId || 
-          t.creatorId === currentUserId
-        )
+        // Only show tasks where user is a member (has claimed or joined)
+        base = base.filter((t) => t.members.includes(currentUserId || ''))
         break
       case 'open': 
         base = base.filter((t) => filterOpen([t]).length > 0)

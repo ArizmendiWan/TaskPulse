@@ -75,7 +75,8 @@ export function sortByDue(tasks: Task[]): Task[] {
 
 export function filterMyTasks(tasks: Task[], userId: string | null): Task[] {
   if (!userId) return []
-  return sortByDue(tasks.filter((t) => t.members.includes(userId) || t.takenBy === userId || t.creatorId === userId))
+  // Only show tasks where user is a member (has claimed or joined)
+  return sortByDue(tasks.filter((t) => t.members.includes(userId)))
 }
 
 export function filterOpen(tasks: Task[]): Task[] {
