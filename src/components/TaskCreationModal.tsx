@@ -115,12 +115,6 @@ export const TaskCreationModal = ({
             />
           </div>
 
-          <div className={`rounded-2xl ${theme.colors.ui.background} p-4 border ${theme.colors.ui.border}`}>
-            <p className={`text-xs font-bold ${theme.colors.ui.textMuted} leading-relaxed`}>
-              💡 <span className="font-black">Tip:</span> After posting, any team member can take responsibility for this task and others can join to help.
-            </p>
-          </div>
-
           <div className="flex gap-4 pt-4">
             <button
               type="button"
