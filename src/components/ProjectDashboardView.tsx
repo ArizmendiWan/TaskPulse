@@ -198,11 +198,11 @@ export const ProjectDashboardView = ({
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <header className={`h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-3 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
-          <div className="flex items-center gap-1.5 md:gap-8 min-w-0 flex-1">
+          <div className="flex items-end gap-1.5 md:gap-6 min-w-0 flex-1">
             {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setShowSidebar(true)}
-              className="p-2 rounded-xl md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+              className="p-2 rounded-xl md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 mb-1"
               title="Open Menu"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -212,26 +212,28 @@ export const ProjectDashboardView = ({
               </svg>
             </button>
 
-            <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-[200px] md:max-w-none flex flex-col justify-end h-12">
-              <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1 leading-none">
+            {/* Project Section */}
+            <div className="min-w-0 flex-shrink max-w-[120px] sm:max-w-[200px] md:max-w-xs">
+              <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1">
                 Project
               </p>
-              <h1 className={`text-sm sm:text-base md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate leading-none py-1`}>
+              <h1 className={`text-sm sm:text-base md:text-xl font-black ${theme.colors.ui.text} tracking-tight truncate leading-[38px]`}>
                 {activeProject.name}
               </h1>
             </div>
 
-            <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mx-1 md:mx-4 shrink-0`} />
+            <div className={`h-10 w-px ${theme.colors.ui.border} hidden sm:block shrink-0`} />
 
-            <div className="min-w-0 flex flex-col justify-end h-12">
-              <p className={`hidden md:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1 leading-none`}>
+            {/* Invite Link Section */}
+            <div className="min-w-0 shrink-0">
+              <p className={`hidden md:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
                 Invite Link
               </p>
-              <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 mr-2 md:mr-8 py-0.5">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className={`p-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                  className={`h-[38px] px-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
                     copyFeedback 
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
                       : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
@@ -256,7 +258,7 @@ export const ProjectDashboardView = ({
                   <button
                     type="button"
                     onClick={() => setShowQR(!showQR)}
-                    className={`p-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                    className={`h-[38px] px-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
                       showQR
                         ? 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                         : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
