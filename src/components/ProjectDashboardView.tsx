@@ -197,12 +197,12 @@ export const ProjectDashboardView = ({
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-        <header className={`h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-3 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
-          <div className="flex items-end gap-1.5 md:gap-6 min-w-0 flex-1">
+        <header className={`h-16 md:h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-3 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
+          <div className="flex items-center gap-2 md:gap-6 min-w-0">
             {/* Mobile Hamburger Menu */}
             <button
               onClick={() => setShowSidebar(true)}
-              className="p-2 rounded-xl md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 mb-1"
+              className="p-2 rounded-xl md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               title="Open Menu"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -213,27 +213,27 @@ export const ProjectDashboardView = ({
             </button>
 
             {/* Project Section */}
-            <div className="min-w-0 flex-shrink max-w-[120px] sm:max-w-[200px] md:max-w-xs">
+            <div className="min-w-0 shrink">
               <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1">
                 Project
               </p>
-              <h1 className={`text-sm sm:text-base md:text-xl font-black ${theme.colors.ui.text} tracking-tight truncate leading-[38px]`}>
+              <h1 className={`text-base md:text-xl font-black ${theme.colors.ui.text} tracking-tight truncate max-w-[120px] sm:max-w-[180px] md:max-w-xs`}>
                 {activeProject.name}
               </h1>
             </div>
 
-            <div className={`h-10 w-px ${theme.colors.ui.border} hidden sm:block shrink-0`} />
+            <div className={`h-8 md:h-10 w-px ${theme.colors.ui.border} shrink-0 hidden md:block`} />
 
-            {/* Invite Link Section */}
-            <div className="min-w-0 shrink-0">
-              <p className={`hidden md:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
+            {/* Invite Link Section - Desktop */}
+            <div className="shrink-0 hidden md:block">
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
                 Invite Link
               </p>
-              <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className={`h-[38px] px-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                  className={`h-[38px] px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
                     copyFeedback 
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
                       : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
@@ -250,7 +250,7 @@ export const ProjectDashboardView = ({
                       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                     </svg>
                   )}
-                  <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                  <span className="text-[10px] font-black uppercase tracking-widest">
                     {copyFeedback ? 'Copied!' : 'Copy'}
                   </span>
                 </button>
@@ -258,7 +258,7 @@ export const ProjectDashboardView = ({
                   <button
                     type="button"
                     onClick={() => setShowQR(!showQR)}
-                    className={`h-[38px] px-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                    className={`h-[38px] px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
                       showQR
                         ? 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                         : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
@@ -274,12 +274,12 @@ export const ProjectDashboardView = ({
                       <rect x="14" y="18" width="3" height="3" />
                       <rect x="18" y="18" width="3" height="3" />
                     </svg>
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                    <span className="text-[10px] font-black uppercase tracking-widest">
                       QR Code
                     </span>
                   </button>
                   {showQR && (
-                    <div className="absolute top-full left-0 sm:right-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute top-full left-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="flex flex-col items-center gap-3">
                         <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textMuted} whitespace-nowrap`}>
                           Scan to join {activeProject.name}
@@ -340,25 +340,130 @@ export const ProjectDashboardView = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
+            {/* Mobile Invite Buttons */}
+            <div className="flex items-center gap-1.5 md:hidden">
+              <span className={`text-[9px] font-bold uppercase tracking-wider ${theme.colors.ui.textMuted}`}>Invite</span>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className={`p-2 rounded-xl transition-all border-2 ${
+                  copyFeedback 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
+                    : `${theme.colors.ui.background} border-transparent ${theme.colors.ui.textLight}`
+                }`}
+                title="Copy invite link"
+              >
+                {copyFeedback ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                )}
+              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowQR(!showQR)}
+                  className={`p-2 rounded-xl transition-all border-2 ${
+                    showQR
+                      ? 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                      : `${theme.colors.ui.background} border-transparent ${theme.colors.ui.textLight}`
+                  }`}
+                  title="Show QR Code"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="3" height="3" />
+                    <rect x="18" y="14" width="3" height="3" />
+                    <rect x="14" y="18" width="3" height="3" />
+                    <rect x="18" y="18" width="3" height="3" />
+                  </svg>
+                </button>
+                {showQR && (
+                  <div className="absolute top-full right-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col items-center gap-3">
+                      <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textMuted} whitespace-nowrap`}>
+                        Scan to join {activeProject.name}
+                      </p>
+                      <div ref={qrRef} className="p-3 bg-white rounded-xl">
+                        <QRCodeSVG
+                          value={shareLink}
+                          size={140}
+                          level="M"
+                          marginSize={0}
+                        />
+                      </div>
+                      <div className="flex gap-2 w-full">
+                        <button
+                          type="button"
+                          onClick={handleSaveQR}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" x2="12" y1="15" y2="3" />
+                          </svg>
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCopyQR}
+                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                            qrCopyFeedback
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {qrCopyFeedback ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                              </svg>
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={onToggleDarkMode}
-              className={`p-2.5 sm:p-3 rounded-xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
+              className={`p-2 md:p-3 rounded-xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" md-width="18" md-height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" md-width="18" md-height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
               )}
             </button>
             <button
               type="button"
               onClick={onShowTaskModal}
-              className="rounded-xl bg-emerald-600 px-3.5 sm:px-8 py-2.5 sm:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+              className="rounded-xl bg-emerald-600 px-3 md:px-8 py-2 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
             >
               <span className="hidden sm:inline">POST TASK</span>
-              <span className="sm:hidden">+ TASK</span>
+              <span className="sm:hidden">+</span>
             </button>
           </div>
         </header>
