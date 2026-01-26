@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import type { TaskStatus } from '../../types'
 import { isOverdue, isExpired, isDueSoon, formatDue, deriveStatus } from '../../lib/taskUtils'
 import { statusLabels, statusPills } from '../../constants'
 import { theme } from '../../theme'
