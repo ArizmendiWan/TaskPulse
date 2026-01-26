@@ -82,7 +82,12 @@ function App() {
     dueAt: '',
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
   const [aiOpen, setAiOpen] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
   const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})

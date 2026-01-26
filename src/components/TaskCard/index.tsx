@@ -93,7 +93,7 @@ export const TaskCard = ({
     >
       {/* Collapsed Header */}
       <div className="p-4 md:p-5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Left side: Task info */}
           <div 
             role="button"
@@ -122,12 +122,12 @@ export const TaskCard = ({
               >
                 <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
-              <h4 className={`text-base font-bold ${theme.colors.ui.text} break-words line-clamp-1 group-hover:line-clamp-none transition-all`}>
+              <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words line-clamp-1 group-hover:line-clamp-none transition-all`}>
                 {task.title}
               </h4>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 ml-7">
-              <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[200px]`}>
+              <p className={`text-[10px] md:text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[200px]`}>
                 {hasClaimed ? (
                   <span className="text-emerald-600 dark:text-emerald-400">
                     {memberNames.join(', ')}
@@ -136,12 +136,12 @@ export const TaskCard = ({
                   <span className="text-amber-600 dark:text-amber-400 font-black">Unclaimed</span>
                 )}
               </p>
-              <p className={`text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
+              <p className={`text-[10px] md:text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
             </div>
           </div>
 
           {/* Right side: All on one line - Status badges + Actions + Expand */}
-          <div className="shrink-0 flex items-center gap-2">
+          <div className="shrink-0 flex items-center justify-end gap-2 ml-7 sm:ml-0">
             <TaskStatusBadges
               task={task}
               onNudge={onNudge}

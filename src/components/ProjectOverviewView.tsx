@@ -27,39 +27,39 @@ export const ProjectOverviewView = ({
 }: ProjectOverviewViewProps) => {
   return (
     <div className={`min-h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} pb-12 transition-colors duration-300`}>
-      <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-12 space-y-10">
         <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">TaskPulse</p>
-            <h1 className="text-4xl font-black tracking-tight">
+          <div className="space-y-2 text-center md:text-left">
+            <p className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-amber-600">TaskPulse</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
               {currentUserName ? `${currentUserName}'s Projects` : 'Your Projects'}
             </h1>
-            <p className={`text-sm font-medium ${theme.colors.ui.textMuted} max-w-md`}>
+            <p className={`text-xs md:text-sm font-medium ${theme.colors.ui.textMuted} max-w-md mx-auto md:mx-0`}>
               All your group projects and their current status.
             </p>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-wrap justify-center md:justify-end gap-2 md:gap-3 items-center">
             <button
               onClick={onToggleDarkMode}
               className={`p-3 rounded-2xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
               )}
             </button>
             {currentUserId && (
               <button
                 type="button"
                 onClick={onLogout}
-                className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 transition-all hover:bg-rose-700 hover:-translate-y-0.5 active:translate-y-0"
+                className="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-4 md:px-6 py-2.5 md:py-3 text-[11px] md:text-sm font-black text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 transition-all hover:bg-rose-700 hover:-translate-y-0.5 active:translate-y-0"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -71,14 +71,14 @@ export const ProjectOverviewView = ({
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
-                Logout
+                <span className="hidden sm:inline">Logout</span>
               </button>
             )}
             <button
               type="button"
               onClick={onGoToCreate}
               disabled={!currentUserId}
-              className={`inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 ${
+              className={`inline-flex items-center gap-2 rounded-2xl px-5 md:px-6 py-2.5 md:py-3 text-[11px] md:text-sm font-black text-white shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 ${
                 currentUserId
                   ? 'bg-amber-600 shadow-amber-200 hover:bg-amber-500'
                   : 'bg-slate-300 shadow-slate-200 cursor-not-allowed'
@@ -87,8 +87,8 @@ export const ProjectOverviewView = ({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -99,7 +99,8 @@ export const ProjectOverviewView = ({
                 <path d="M5 12h14" />
                 <path d="M12 5v14" />
               </svg>
-              New Project
+              <span className="hidden sm:inline">New Project</span>
+              <span className="sm:hidden">NEW</span>
             </button>
           </div>
         </header>

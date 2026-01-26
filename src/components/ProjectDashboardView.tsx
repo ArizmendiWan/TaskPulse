@@ -174,6 +174,14 @@ export const ProjectDashboardView = ({
 
   return (
     <div className={`flex h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} overflow-hidden font-sans transition-colors duration-300`}>
+      {/* Sidebar Backdrop (Mobile only) */}
+      {showSidebar && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-300"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       <Sidebar
         showSidebar={showSidebar}
         setShowSidebar={setShowSidebar}
@@ -189,53 +197,62 @@ export const ProjectDashboardView = ({
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-        <header className={`h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-4 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
-          <div className="flex items-start gap-4 md:gap-8 min-w-0">
-            <div className="min-w-0">
+        <header className={`h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-3 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
+          <div className="flex items-center gap-1.5 md:gap-8 min-w-0 flex-1">
+            {/* Mobile Hamburger Menu */}
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="p-2 rounded-xl md:hidden hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+              title="Open Menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" x2="20" y1="12" y2="12" />
+                <line x1="4" x2="20" y1="6" y2="6" />
+                <line x1="4" x2="20" y1="18" y2="18" />
+              </svg>
+            </button>
+
+            <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-[200px] md:max-w-none">
               <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1">
                 Project
               </p>
-              <h1 className={`text-xl md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md`}>
+              <h1 className={`text-sm sm:text-base md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate`}>
                 {activeProject.name}
               </h1>
             </div>
 
             <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mt-0`} />
 
-            <div className="min-w-0">
-              <p className={`hidden sm:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
-                Invite Link
-              </p>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={`p-2 px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
-                    copyFeedback 
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
-                      : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
-                  }`}
-                  title="Copy invite link to clipboard"
-                >
-                  {copyFeedback ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                    </svg>
-                  )}
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    {copyFeedback ? 'Copied!' : 'Copy'}
-                  </span>
-                </button>
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className={`p-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                  copyFeedback 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
+                    : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
+                }`}
+                title="Copy invite link to clipboard"
+              >
+                {copyFeedback ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                )}
+                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                  {copyFeedback ? 'Copied!' : 'Copy'}
+                </span>
+              </button>
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowQR(!showQR)}
-                  className={`p-2 px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                  className={`p-2 sm:px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
                     showQR
                       ? 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                       : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
@@ -251,14 +268,14 @@ export const ProjectDashboardView = ({
                     <rect x="14" y="18" width="3" height="3" />
                     <rect x="18" y="18" width="3" height="3" />
                   </svg>
-                  <span className="text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
                     QR Code
                   </span>
                 </button>
                 {showQR && (
-                  <div className="absolute top-full right-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full left-0 sm:right-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex flex-col items-center gap-3">
-                      <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textMuted}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textMuted} whitespace-nowrap`}>
                         Scan to join {activeProject.name}
                       </p>
                       <div ref={qrRef} className="p-3 bg-white rounded-xl">
@@ -313,26 +330,25 @@ export const ProjectDashboardView = ({
                   </div>
                 )}
               </div>
-              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={onToggleDarkMode}
-              className={`p-3 rounded-xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
+              className={`p-2.5 sm:p-3 rounded-xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
               title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               {darkMode ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" md-width="18" md-height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M22 12h2"/><path d="m4.93 19.07 1.41-1.41"/><path d="m17.66 6.34 1.41-1.41"/></svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" md-width="18" md-height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
               )}
             </button>
             <button
               type="button"
               onClick={onShowTaskModal}
-              className="rounded-xl bg-emerald-600 px-5 md:px-8 py-3 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+              className="rounded-xl bg-emerald-600 px-3.5 sm:px-8 py-2.5 sm:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
             >
               <span className="hidden sm:inline">POST TASK</span>
               <span className="sm:hidden">+ TASK</span>
@@ -354,10 +370,10 @@ export const ProjectDashboardView = ({
             ) : (
               <div className="space-y-6 pb-20">
                 <div
-                  className="flex flex-wrap items-center justify-between gap-4"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4"
                 >
                   <div
-                    className="flex flex-wrap items-center gap-2"
+                    className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar scroll-smooth"
                     role="group"
                     aria-label="task filters"
                   >
@@ -366,7 +382,7 @@ export const ProjectDashboardView = ({
                         key={key}
                         type="button"
                         onClick={() => setFilter(key)}
-                        className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
+                        className={`rounded-xl px-3.5 sm:px-5 py-2 sm:py-2.5 text-[10px] md:text-xs font-black transition-all whitespace-nowrap ${
                           filter === key
                             ? `${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} shadow-xl shadow-slate-200 dark:shadow-black/50`
                             : `${theme.colors.ui.surface} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.background} border-2 ${theme.colors.ui.border}`
@@ -379,7 +395,7 @@ export const ProjectDashboardView = ({
 
                   <button
                     onClick={() => setShowDone(!showDone)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-xs font-black uppercase tracking-widest ${
+                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap ${
                       !showDone
                         ? `${theme.colors.status.done.bg} ${theme.colors.status.done.border} ${theme.colors.status.done.text}`
                         : `${theme.colors.ui.surface} ${theme.colors.ui.border} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.borderStrong}`

@@ -46,12 +46,12 @@ export const Sidebar = ({
   return (
     <aside
       className={`${
-        showSidebar ? 'w-80' : 'w-16'
-      } border-r ${theme.colors.ui.border} ${theme.colors.ui.surface} flex flex-col h-full shrink-0 z-20 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-300 ease-in-out relative`}
+        showSidebar ? 'translate-x-0 w-80' : '-translate-x-full w-0 md:translate-x-0 md:w-16'
+      } fixed md:relative border-r ${theme.colors.ui.border} ${theme.colors.ui.surface} flex flex-col h-full shrink-0 z-50 md:z-20 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-300 ease-in-out`}
     >
       <button
         onClick={() => setShowSidebar(!showSidebar)}
-        className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} rounded-full flex items-center justify-center ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} hover:${theme.colors.ui.borderStrong} transition-all shadow-sm z-30 group`}
+        className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} rounded-full flex items-center justify-center ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} hover:${theme.colors.ui.borderStrong} transition-all shadow-sm z-30 group hidden md:flex`}
       >
         <svg
           className={`transition-transform duration-300 ${showSidebar ? 'rotate-0' : 'rotate-180'}`}

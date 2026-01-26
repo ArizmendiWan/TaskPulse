@@ -65,28 +65,28 @@ export function AiChatModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className={`w-full max-w-2xl rounded-[2rem] ${theme.colors.ui.surface} shadow-2xl overflow-hidden border ${theme.colors.ui.border}`}>
-        <div className={`flex items-center justify-between px-6 py-5 border-b ${theme.colors.ui.border}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+      <div className={`w-full h-full sm:h-auto sm:max-w-2xl sm:rounded-[2rem] ${theme.colors.ui.surface} shadow-2xl overflow-hidden border-x sm:border ${theme.colors.ui.border} flex flex-col`}>
+        <div className={`flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b ${theme.colors.ui.border} shrink-0`}>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">
               Assistant
             </p>
-            <div className={`text-lg font-black ${theme.colors.ui.text}`}>TaskPulse AI</div>
+            <div className={`text-base sm:text-lg font-black ${theme.colors.ui.text}`}>TaskPulse AI</div>
           </div>
           <button
-            className={`rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover}`}
+            className={`rounded-xl px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover}`}
             onClick={onClose}
           >
             Close
           </button>
         </div>
 
-        <div className="h-[420px] overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
           {msgs.map((m, i) => (
             <div
               key={i}
-              className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
+              className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 text-sm leading-relaxed shadow-sm ${
                 m.role === 'user'
                   ? 'ml-auto bg-slate-900 dark:bg-amber-600 text-white'
                   : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
@@ -111,10 +111,10 @@ export function AiChatModal({
           <div ref={bottomRef} />
         </div>
 
-        <div className={`border-t p-4 flex gap-3 ${theme.colors.ui.border} ${theme.colors.action.secondary.bg}`}>
+        <div className={`border-t p-4 flex gap-2 sm:gap-3 ${theme.colors.ui.border} ${theme.colors.action.secondary.bg} shrink-0 pb-safe-area`}>
           <input
-            className={`flex-1 rounded-2xl px-5 py-3 text-sm font-semibold shadow-inner ${theme.colors.ui.input}`}
-            placeholder="Type your message..."
+            className={`flex-1 rounded-2xl px-4 sm:px-5 py-2.5 sm:py-3 text-sm font-semibold shadow-inner ${theme.colors.ui.input}`}
+            placeholder="Type message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -122,7 +122,7 @@ export function AiChatModal({
             }}
           />
           <button
-            className={`rounded-2xl px-6 py-3 text-sm font-black transition-all ${
+            className={`rounded-2xl px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-black transition-all ${
               canSend 
                 ? 'bg-slate-900 dark:bg-amber-600 text-white hover:scale-105 active:scale-95 shadow-lg' 
                 : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'

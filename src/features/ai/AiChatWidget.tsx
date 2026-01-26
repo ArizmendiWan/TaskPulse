@@ -87,7 +87,7 @@ export function AiChatWidget({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-8 right-8 z-50 rounded-2xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} px-6 py-4 text-xs font-black tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-3`}
+        className={`fixed bottom-4 md:bottom-8 right-4 md:right-8 z-50 rounded-2xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} px-5 md:px-6 py-3.5 md:py-4 text-[10px] md:text-xs font-black tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 md:gap-3`}
         title="AI Chat"
       >
         <div className={`w-2 h-2 rounded-full ${busy ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
@@ -96,8 +96,8 @@ export function AiChatWidget({
       
       {/* Chat Window */}
       {open && (
-        <div className={`fixed bottom-28 right-8 z-50 w-[380px] max-w-[92vw] rounded-[2.5rem] ${theme.colors.ui.surface} border-2 ${theme.colors.ui.border} shadow-2xl overflow-hidden flex flex-col transition-all animate-in fade-in slide-in-from-bottom-4 duration-300`}>
-          <div className={`px-6 py-5 border-b ${theme.colors.ui.border} flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30`}>
+        <div className={`fixed bottom-20 md:bottom-28 right-4 md:right-8 z-50 w-[calc(100%-2rem)] sm:w-[380px] max-w-[92vw] rounded-[2rem] md:rounded-[2.5rem] ${theme.colors.ui.surface} border-2 ${theme.colors.ui.border} shadow-2xl overflow-hidden flex flex-col transition-all animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+          <div className={`px-5 md:px-6 py-4 md:py-5 border-b ${theme.colors.ui.border} flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30`}>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">
                 TaskPulse AI
