@@ -193,7 +193,7 @@ function App() {
       base = base.filter((t) => t.status !== 'done')
     }
 
-    // Sort: 1. Pinned (top), 2. Active vs Done (done to the bottom), 3. Due Date (nearest first)
+    // Sort: 1. Pinned (top), 2. Active vs Done (done to the bottom), 3. For Active: Due Date (nearest first), For Done: Recently Done (newest first)
     return base.sort((a, b) => {
       // 1. Pinned: top
       if (a.isPinned && !b.isPinned) return -1
@@ -203,7 +203,15 @@ function App() {
       if (a.status === 'done' && b.status !== 'done') return 1
       if (a.status !== 'done' && b.status === 'done') return -1
 
-      // 3. Due Date: nearest first
+      // 3. Sorting within groups
+      if (a.status === 'done' && b.status === 'done') {
+        // Sort done tasks by doneAt descending (newest first)
+        const timeA = new Date(a.doneAt || a.updatedAt).getTime()
+        const timeB = new Date(b.doneAt || b.updatedAt).getTime()
+        return timeB - timeA
+      }
+
+      // Default sort for active tasks: Due Date (nearest first)
       const timeA = new Date(a.dueAt).getTime()
       const timeB = new Date(b.dueAt).getTime()
       return timeA - timeB
@@ -378,6 +386,7 @@ function App() {
     handleUpdateTask(task.id, (t) => ({
       ...t,
       status: next,
+      doneAt: next === 'done' ? new Date().toISOString() : t.doneAt,
       activity: [...t.activity, createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`)],
       updatedAt: new Date().toISOString(),
     }))

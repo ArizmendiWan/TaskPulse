@@ -37,6 +37,7 @@ export interface Task {
   comments?: Comment[]
   isPinned?: boolean
   lastNudgedAt?: string // timestamp of last nudge sent
+  doneAt?: string // timestamp when task was marked done
   createdAt: string
   updatedAt: string
 }

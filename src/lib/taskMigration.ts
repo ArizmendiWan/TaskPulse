@@ -25,6 +25,7 @@ interface LegacyTask {
     updatedAt: string
   }>
   isPinned?: boolean
+  doneAt?: string
   createdAt: string
   updatedAt: string
   // New fields (may or may not exist)
@@ -98,6 +99,11 @@ export function migrateTask(task: LegacyTask, projectOwnerId: string | null): Ta
   }
   if (task.isPinned !== undefined) {
     migratedTask.isPinned = task.isPinned
+  }
+  if (newStatus === 'done' && !task.doneAt) {
+    migratedTask.doneAt = task.updatedAt || task.createdAt
+  } else if (task.doneAt) {
+    migratedTask.doneAt = task.doneAt
   }
 
   return migratedTask
