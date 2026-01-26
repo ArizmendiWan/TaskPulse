@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import type { Project, Task, TaskStatus } from '../types'
 import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { theme } from '../theme'
 import { Sidebar } from './Sidebar'
 import { TaskCard } from './TaskCard'
-import { AiChatWidget } from '../features/ai/AiChatWidget'
-import { generateAiContextHint } from '../features/ai/utils'
+const AiChatWidget = React.lazy(() =>
+  import('../features/ai/AiChatWidget').then((m) => ({ default: m.AiChatWidget }))
+)
 
 interface ProjectDashboardViewProps {
   activeProject: Project
@@ -15,6 +16,7 @@ interface ProjectDashboardViewProps {
   currentUserName: string | null
   memberList: string[]
   getUserName: (userId: string | null) => string
+  aiContextHint?: string
   filter: FilterKey
   setFilter: (filter: FilterKey) => void
   showDone: boolean
@@ -55,6 +57,7 @@ export const ProjectDashboardView = ({
   currentUserName,
   memberList,
   getUserName,
+  aiContextHint,
   filter,
   setFilter,
   showDone,
@@ -438,15 +441,12 @@ export const ProjectDashboardView = ({
           </div>
         </div>
 
-        <AiChatWidget
-          projectName={activeProject.name}
-          contextHint={generateAiContextHint(
-            activeProject,
-            currentUserName,
-            getUserName,
-            memberList
-          )}
-        />
+        <Suspense fallback={null}>
+          <AiChatWidget
+            projectName={activeProject.name}
+            contextHint={aiContextHint}
+          />
+        </Suspense>
       </main>
     </div>
   )

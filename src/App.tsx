@@ -1,5 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
-import type React from 'react'
+import React, { useMemo, useState, useEffect, Suspense } from 'react'
 import type { Project, Task, TaskStatus, User } from './types'
 import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
 import { sendNudgeEmails } from './utilities/emailService'
@@ -25,10 +24,16 @@ import { LoginView } from './components/LoginView'
 import { CreateProjectView } from './components/CreateProjectView'
 import { ProjectOverviewView } from './components/ProjectOverviewView'
 import { ProjectDashboardView } from './components/ProjectDashboardView'
-import { TaskCreationModal } from './components/TaskCreationModal'
-import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
+const TaskCreationModal = React.lazy(() =>
+  import('./components/TaskCreationModal').then((m) => ({ default: m.TaskCreationModal }))
+)
+const DeleteConfirmationModal = React.lazy(() =>
+  import('./components/DeleteConfirmationModal').then((m) => ({ default: m.DeleteConfirmationModal }))
+)
 import { InviteView } from './components/InviteView'
-import { AiChatModal } from './features/ai/AiChatModal'
+const AiChatModal = React.lazy(() =>
+  import('./features/ai/AiChatModal').then((m) => ({ default: m.AiChatModal }))
+)
 import { generateAiContextHint } from './features/ai/utils'
 
 function App() {
@@ -125,6 +130,21 @@ function App() {
     }
     return uniqueIds
   }, [activeProject, userCache])
+
+  // Track task status changes to refresh AI context only when status updates
+  const taskStatusSignature = useMemo(() => {
+    if (!activeProject) return ''
+    return activeProject.tasks
+      .map((t) => `${t.id}:${t.status}`)
+      .sort()
+      .join('|')
+  }, [activeProject])
+
+  const aiContextHint = useMemo(() => {
+    if (!activeProject) return undefined
+    return generateAiContextHint(activeProject, currentUserName, getUserName, memberList)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?.id, taskStatusSignature, currentUserName, getUserName, memberList])
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
@@ -661,6 +681,7 @@ function App() {
             onUpdateUserName={handleUpdateUserName}
             onTogglePin={handleToggleTaskPin}
             onOpenAI={() => setAiOpen(true)}
+            aiContextHint={aiContextHint}
           />
         ) : isLoadingProject ? (
           <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -690,41 +711,38 @@ function App() {
         )
       )}
 
-      {showTaskModal && (
-        <TaskCreationModal
-          taskForm={taskForm}
-          setTaskForm={setTaskForm}
-          onSubmit={handleCreateTask}
-          onClose={() => setShowTaskModal(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showTaskModal && (
+          <TaskCreationModal
+            taskForm={taskForm}
+            setTaskForm={setTaskForm}
+            onSubmit={handleCreateTask}
+            onClose={() => setShowTaskModal(false)}
+          />
+        )}
+      </Suspense>
 
-      {deleteTarget && (
-        <DeleteConfirmationModal
-          deleteTarget={deleteTarget}
-          deleteConfirmCode={deleteConfirmCode}
-          deleteConfirmInput={deleteConfirmInput}
-          setDeleteConfirmInput={setDeleteConfirmInput}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={handleExecuteDelete}
-        />
-      )}
+      <Suspense fallback={null}>
+        {deleteTarget && (
+          <DeleteConfirmationModal
+            deleteTarget={deleteTarget}
+            deleteConfirmCode={deleteConfirmCode}
+            deleteConfirmInput={deleteConfirmInput}
+            setDeleteConfirmInput={setDeleteConfirmInput}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleExecuteDelete}
+          />
+        )}
+      </Suspense>
 
-      <AiChatModal
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        projectName={activeProject?.name}
-        contextHint={
-          activeProject
-            ? generateAiContextHint(
-                activeProject,
-                currentUserName,
-                getUserName,
-                memberList
-              )
-            : undefined
-        }
-      />
+      <Suspense fallback={null}>
+        <AiChatModal
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          projectName={activeProject?.name}
+          contextHint={aiContextHint}
+        />
+      </Suspense>
     </>
   )
 }
