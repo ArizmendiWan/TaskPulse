@@ -212,22 +212,22 @@ export const ProjectDashboardView = ({
               </svg>
             </button>
 
-            <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-[200px] md:max-w-none">
-              <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1">
+            <div className="min-w-0 flex-1 max-w-[120px] sm:max-w-[200px] md:max-w-none flex flex-col justify-end h-12">
+              <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1 leading-none">
                 Project
               </p>
-              <h1 className={`text-sm sm:text-base md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate`}>
+              <h1 className={`text-sm sm:text-base md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate leading-none py-1`}>
                 {activeProject.name}
               </h1>
             </div>
 
             <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mx-1 md:mx-4 shrink-0`} />
 
-            <div className="min-w-0">
-              <p className={`hidden lg:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
+            <div className="min-w-0 flex flex-col justify-end h-12">
+              <p className={`hidden md:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1 leading-none`}>
                 Invite Link
               </p>
-              <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 mr-2 md:mr-8">
+              <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 mr-2 md:mr-8 py-0.5">
                 <button
                   type="button"
                   onClick={handleCopy}
