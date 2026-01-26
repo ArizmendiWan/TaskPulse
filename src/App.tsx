@@ -1,241 +1,232 @@
-import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { loadMemberName, loadProjects, saveMemberName, saveProjects } from './storage'
-import type { ActivityItem, Project, Task, TaskStatus } from './types'
-import { db } from './lib/firebase'
-import { doc, onSnapshot, setDoc, getDoc, deleteDoc } from 'firebase/firestore'
+import React, { useMemo, useState, useEffect, Suspense } from 'react'
+import type { Project, Task, TaskStatus, User } from './types'
+import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
+import { sendNudgeEmails } from './utilities/emailService'
 import {
-  deriveStatus,
-  filterAtRisk,
   filterDueSoon,
-  filterMyTasks,
+  filterOpen,
   filterOverdue,
   formatDue,
-  isAtRisk,
-  isDueSoon,
-  isOverdue,
-  sortByDue,
+  canNudge,
+  getNextNudgeTime,
 } from './lib/taskUtils'
-
-type FilterKey = 'all' | 'mine' | 'dueSoon' | 'atRisk' | 'overdue'
-
-const statusLabels: Record<string, string> = {
-  unassigned: 'Unassigned',
-  not_started: 'Not Started',
-  in_progress: 'In Progress',
-  done: 'Done',
-  overdue: 'Overdue',
-}
-
-const statusPills: Record<string, string> = {
-  unassigned: 'bg-slate-50 text-slate-500 border border-slate-200',
-  not_started: 'bg-amber-50 text-amber-700 border border-amber-200',
-  in_progress: 'bg-blue-50 text-blue-700 border border-blue-200',
-  done: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  overdue: 'bg-rose-50 text-rose-700 border border-rose-200',
-}
-
-const filterLabels: Record<FilterKey, string> = {
-  all: 'All',
-  mine: 'My Tasks',
-  dueSoon: 'Due Soon (<48h)',
-  atRisk: 'At Risk',
-  overdue: 'Overdue',
-}
-
-function uuid() {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `id-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
-  )
-}
-
-function projectShareLink(projectId: string) {
-  const url = new URL(window.location.href)
-  url.searchParams.set('projectId', projectId)
-  return url.toString()
-}
-
-function ensureMemberList(members: string[], name: string) {
-  const trimmed = name.trim()
-  if (!trimmed) return members
-  if (members.includes(trimmed)) return members
-  return [...members, trimmed]
-}
-
-function createActivity(type: ActivityItem['type'], note?: string): ActivityItem {
-  return {
-    id: uuid(),
-    type,
-    note,
-    at: new Date().toISOString(),
-  }
-}
-
-function projectStats(project: Project) {
-  const total = project.tasks.length
-  const done = project.tasks.filter((t) => t.status === 'done').length
-  const percentDone = total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100))
-  const dueSoon = filterDueSoon(project.tasks).length
-  const atRisk = filterAtRisk(project.tasks).length
-  const overdue = filterOverdue(project.tasks).length
-  return { total, done, percentDone, dueSoon, atRisk, overdue }
-}
+import {
+  type FilterKey,
+  createActivity,
+  ensureMemberList,
+  uuid,
+  statusLabels,
+} from './constants'
+import { useAuth } from './hooks/useAuth'
+import { useProjects } from './hooks/useProjects'
+import { useUserCache } from './hooks/useUserCache'
+import { LoginView } from './components/LoginView'
+import { CreateProjectView } from './components/CreateProjectView'
+import { ProjectOverviewView } from './components/ProjectOverviewView'
+import { ProjectDashboardView } from './components/ProjectDashboardView'
+const TaskCreationModal = React.lazy(() =>
+  import('./components/TaskCreationModal').then((m) => ({ default: m.TaskCreationModal }))
+)
+const DeleteConfirmationModal = React.lazy(() =>
+  import('./components/DeleteConfirmationModal').then((m) => ({ default: m.DeleteConfirmationModal }))
+)
+import { InviteView } from './components/InviteView'
+const AiChatModal = React.lazy(() =>
+  import('./features/ai/AiChatModal').then((m) => ({ default: m.AiChatModal }))
+)
+import { generateAiContextHint } from './features/ai/utils'
 
 function App() {
-  const initialProjectId =
-    new URLSearchParams(window.location.search).get('projectId') ?? null
-  const initialView: 'overview' | 'project' | 'create' =
-    window.location.pathname.endsWith('/new')
-      ? 'create'
-      : initialProjectId
-        ? 'project'
-        : 'overview'
+  const initialProjectId = new URLSearchParams(window.location.search).get('projectId') ?? null
+  const initialView: 'overview' | 'project' | 'create' | 'login' =
+    window.location.pathname.endsWith('/new') ? 'create' : initialProjectId ? 'project' : 'overview'
 
-  const [projects, setProjects] = useState<Project[]>(() => loadProjects())
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(
-    initialProjectId,
-  )
-  const [view, setView] = useState<'overview' | 'project' | 'create'>(initialView)
-  const [memberNameInput, setMemberNameInput] = useState('')
-  const [currentMember, setCurrentMember] = useState<string>(() =>
-    loadMemberName(initialProjectId),
-  )
-  const [filter, setFilter] = useState<FilterKey>('all')
+  const { currentUserId, currentUserName, login, logout, updateName } = useAuth()
+  const {
+    projects,
+    activeProjectId,
+    setActiveProjectId,
+    activeProject,
+    userProjects,
+    isLoadingProject,
+    upsertProject,
+    upsertProjectAsyncById,
+    deleteProject,
+    addProject,
+  } = useProjects(currentUserId, initialProjectId)
+
+  const { userCache, setUserCache, getUserName } = useUserCache(projects)
+
+  const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
+  const [filter, setFilter] = useState<FilterKey>(() => {
+    return (localStorage.getItem('taskpulse-filter') as FilterKey) || 'all'
+  })
+  const [showDone, setShowDone] = useState(() => {
+    const saved = localStorage.getItem('taskpulse-showdone')
+    return saved === null ? true : saved === 'true'
+  })
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('taskpulse-theme')
+      if (saved) return saved === 'dark'
+      return !!window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  })
   const [newProject, setNewProject] = useState({ name: '', course: '' })
-  const [taskForm, setTaskForm] = useState<{
-    title: string
-    description: string
-    dueAt: string
-    owners: string[]
-    difficulty: string
-  }>({
+  const [loginForm, setLoginForm] = useState({ name: '', email: '' })
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
     dueAt: '',
-    owners: [],
-    difficulty: '',
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const [showSidebar, setShowSidebar] = useState(true)
-  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
-  const activeProject = useMemo(
-    () => projects.find((p) => p.id === activeProjectId) ?? null,
-    [projects, activeProjectId],
-  )
-  const resolvedView: 'overview' | 'project' | 'create' =
-    view === 'project' && !activeProject && !initialProjectId ? 'overview' : view
-  const memberList = useMemo(
-    () =>
-      activeProject
-        ? Array.from(new Set(activeProject.members.filter((m) => m && m.trim())))
-        : [],
-    [activeProject],
-  )
-
-  useEffect(() => {
-    saveProjects(projects)
-  }, [projects])
-
-  // Firebase Real-time Sync
-  useEffect(() => {
-    if (!activeProjectId) return
-
-    const docRef = doc(db, 'projects', activeProjectId)
-    const unsubscribe = onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data() as Project
-        setProjects((prev) => {
-          const exists = prev.some((p) => p.id === data.id)
-          if (exists) {
-            // Only update if data is actually different to avoid loops
-            const existing = prev.find((p) => p.id === data.id)
-            if (JSON.stringify(existing) === JSON.stringify(data)) return prev
-            return prev.map((p) => (p.id === data.id ? data : p))
-          }
-          return [...prev, data]
-        })
-      }
-    })
-
-    return () => unsubscribe()
-  }, [activeProjectId])
-
-  // Handle joining via link
-  useEffect(() => {
-    if (initialProjectId && !projects.find((p) => p.id === initialProjectId)) {
-      const fetchProject = async () => {
-        try {
-          const docRef = doc(db, 'projects', initialProjectId)
-          const snap = await getDoc(docRef)
-          if (snap.exists()) {
-            const data = snap.data() as Project
-            setProjects((prev) => [...prev, data])
-          }
-        } catch (err) {
-          console.error('Failed to fetch project from Firebase', err)
-        }
-      }
-      fetchProject()
+  const [showSidebar, setShowSidebar] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
     }
-  }, [initialProjectId])
+    return true
+  })
+  const [aiOpen, setAiOpen] = useState(false)
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
+  const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})
+
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string
+    name: string
+    isOwner: boolean
+  } | null>(null)
+  const [deleteConfirmCode, setDeleteConfirmCode] = useState('')
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+
+  const isMember = useMemo(() => {
+    if (!currentUserId || !activeProject) return false
+    return activeProject.members.includes(currentUserId)
+  }, [currentUserId, activeProject])
+
+  const prevProjectId = React.useRef(activeProjectId)
+  const prevIsMember = React.useRef(isMember)
 
   useEffect(() => {
-    if (!activeProjectId) return
-    const storedName = loadMemberName(activeProjectId)
-    setCurrentMember(storedName)
-    setMemberNameInput(storedName)
-  }, [activeProjectId])
+    // Detect if user lost membership of the CURRENT project (was kicked or left)
+    const sameProject = prevProjectId.current === activeProjectId
+    const lostMembership = prevIsMember.current && !isMember
+    
+    if (view === 'project' && activeProject && sameProject && lostMembership && !isLoadingProject) {
+      handleGoToOverview()
+    }
+    
+    prevProjectId.current = activeProjectId
+    prevIsMember.current = isMember
+  }, [activeProjectId, isMember, view, activeProject, isLoadingProject])
 
-  useEffect(() => {
-    if (activeProjectId) saveMemberName(activeProjectId, currentMember)
-  }, [activeProjectId, currentMember])
+  const resolvedView =
+    !currentUserId && (view === 'overview' || view === 'create')
+      ? 'login'
+      : view === 'project' && activeProject && !isMember
+        ? 'invite'
+        : view === 'project' && !activeProject && !activeProjectId
+          ? 'overview'
+          : view
+
+  const memberList = useMemo(() => {
+    if (!activeProject) return []
+    const ids = Array.from(new Set(activeProject.members.filter(Boolean).map((m) => m.trim())))
+
+    // Deduplicate by email if we have the data
+    const seenEmails = new Set<string>()
+    const uniqueIds: string[] = []
+
+    for (const id of ids) {
+      const email = userCache[id]?.email?.toLowerCase()
+      if (email) {
+        if (!seenEmails.has(email)) {
+          seenEmails.add(email)
+          uniqueIds.push(id)
+        }
+      } else {
+        uniqueIds.push(id)
+      }
+    }
+    return uniqueIds
+  }, [activeProject, userCache])
+
+  // Track task status changes to refresh AI context only when status updates
+  const taskStatusSignature = useMemo(() => {
+    if (!activeProject) return ''
+    return activeProject.tasks
+      .map((t) => `${t.id}:${t.status}`)
+      .sort()
+      .join('|')
+  }, [activeProject])
+
+  const aiContextHint = useMemo(() => {
+    if (!activeProject) return undefined
+    return generateAiContextHint(activeProject, currentUserName, getUserName, memberList)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?.id, taskStatusSignature, currentUserName, getUserName, memberList])
 
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
-    const base = sortByDue(activeProject.tasks)
+    let base = [...activeProject.tasks]
+
+    // Apply status filter
     switch (filter) {
-      case 'mine':
-        return filterMyTasks(base, currentMember || null)
-      case 'dueSoon':
-        return filterDueSoon(base)
-      case 'atRisk':
-        return filterAtRisk(base)
-      case 'overdue':
-        return filterOverdue(base)
-      default:
-        return base
+      case 'mine': 
+        // Only show tasks where user is a member (has claimed or joined)
+        base = base.filter((t) => t.members.includes(currentUserId || ''))
+        break
+      case 'open': 
+        base = base.filter((t) => filterOpen([t]).length > 0)
+        break
+      case 'dueSoon': 
+        base = base.filter((t) => filterDueSoon([t]).length > 0)
+        break
+      case 'overdue': 
+        base = base.filter((t) => filterOverdue([t]).length > 0)
+        break
     }
-  }, [activeProject, filter, currentMember])
 
-  function upsertProject(mapper: (project: Project) => Project) {
-    setProjects((prev) => {
-      const next = prev.map((p) => (p.id === activeProjectId ? mapper(p) : p))
-      const updated = next.find((p) => p.id === activeProjectId)
-      if (updated) {
-        setDoc(doc(db, 'projects', updated.id), updated).catch((err) =>
-          console.error('Firebase sync error:', err),
-        )
+    // Filter out done tasks if needed
+    if (!showDone) {
+      base = base.filter((t) => t.status !== 'done')
+    }
+
+    // Sort: 1. Pinned (top), 2. Active vs Done (done to the bottom), 3. For Active: Due Date (nearest first), For Done: Recently Done (newest first)
+    return base.sort((a, b) => {
+      // 1. Pinned: top
+      if (a.isPinned && !b.isPinned) return -1
+      if (!a.isPinned && b.isPinned) return 1
+
+      // 2. Status: done to the bottom
+      if (a.status === 'done' && b.status !== 'done') return 1
+      if (a.status !== 'done' && b.status === 'done') return -1
+
+      // 3. Sorting within groups
+      if (a.status === 'done' && b.status === 'done') {
+        // Sort done tasks by doneAt descending (newest first)
+        const timeA = new Date(a.doneAt || a.updatedAt).getTime()
+        const timeB = new Date(b.doneAt || b.updatedAt).getTime()
+        return timeB - timeA
       }
-      return next
-    })
-  }
 
-  function goToOverview() {
+      // Default sort for active tasks: Due Date (nearest first)
+      const timeA = new Date(a.dueAt).getTime()
+      const timeB = new Date(b.dueAt).getTime()
+      return timeA - timeB
+    })
+  }, [activeProject, filter, currentUserId, showDone])
+
+  // Handlers
+  const handleGoToOverview = () => {
     setView('overview')
     setActiveProjectId(null)
     const url = new URL(window.location.origin + '/')
     window.history.replaceState({}, '', url.toString())
   }
 
-  function goToCreate() {
-    setView('create')
-    setActiveProjectId(null)
-    const url = new URL(window.location.origin + '/new')
-    window.history.replaceState({}, '', url.toString())
-  }
-
-  function goToProject(id: string) {
+  const handleGoToProject = (id: string) => {
     setActiveProjectId(id)
     setFilter('all')
     setView('project')
@@ -244,996 +235,543 @@ function App() {
     window.history.replaceState({}, '', url.toString())
   }
 
-  function handleCreateProject(e: React.FormEvent) {
+  const handleGoToCreate = () => {
+    if (!currentUserId) {
+      setView('login')
+      return
+    }
+    setView('create')
+    setActiveProjectId(null)
+    const url = new URL(window.location.origin + '/new')
+    window.history.replaceState({}, '', url.toString())
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const name = loginForm.name.trim()
+    const email = loginForm.email.trim().toLowerCase()
+
+    if (!name || !email) {
+      setLoginError('Please enter both name and email.')
+      return
+    }
+
+    try {
+      setLoginError(null)
+      const existingUser = await getUserByEmail(email)
+
+      if (existingUser) {
+        let updatedUser = { ...existingUser }
+        if (existingUser.name !== name) {
+          updatedUser = { ...existingUser, name, updatedAt: new Date().toISOString() }
+          await saveUser(updatedUser)
+        }
+        setUserCache((prev) => ({ ...prev, [updatedUser.id]: updatedUser }))
+        login(updatedUser.id, name)
+        handleGoToProject(initialProjectId || '')
+        if (!initialProjectId) handleGoToOverview()
+      } else {
+        const newUserId = uuid()
+        const newUser: User = {
+          id: newUserId,
+          name,
+          email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        await saveUser(newUser)
+        setUserCache((prev) => ({ ...prev, [newUserId]: newUser }))
+        login(newUserId, name)
+        handleGoToProject(initialProjectId || '')
+        if (!initialProjectId) handleGoToOverview()
+      }
+    } catch (err) {
+      setLoginError('An error occurred during login.')
+    }
+  }
+
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newProject.name.trim()) return
     const id = uuid()
-    const now = new Date().toISOString()
     const created: Project = {
       id,
       name: newProject.name.trim(),
-      course: newProject.course.trim() || undefined,
-      members: [],
+      course: newProject.course.trim() || null,
+      members: currentUserId ? [currentUserId] : [],
       tasks: [],
-      createdAt: now,
+      createdAt: new Date().toISOString(),
+      ownerId: currentUserId || null,
     }
-    const nextProjects = [...projects, created]
-    setProjects(nextProjects)
-    setDoc(doc(db, 'projects', created.id), created).catch((err) =>
-      console.error('Firebase create error:', err),
-    )
-    setCurrentMember('')
-    setMemberNameInput('')
+    await addProject(created)
+    handleGoToProject(id)
     setNewProject({ name: '', course: '' })
-    goToProject(id)
   }
 
-  function handleDeleteProject(id: string, name: string) {
-    if (window.confirm(`Are you sure you want to delete the project "${name}"? This action cannot be undone.`)) {
-      setProjects((prev) => prev.filter((p) => p.id !== id))
-      deleteDoc(doc(db, 'projects', id)).catch((err) =>
-        console.error('Firebase delete project error:', err),
-      )
-      if (activeProjectId === id) {
-        goToOverview()
+  const handleUpdateUserName = async (newName: string) => {
+    if (!currentUserId || !newName.trim()) return
+    try {
+      const user = await getUserById(currentUserId)
+      if (user) {
+        const updatedUser = { ...user, name: newName.trim(), updatedAt: new Date().toISOString() }
+        await saveUser(updatedUser)
+        updateName(newName.trim())
+        // Update the local cache immediately so the UI refreshes
+        setUserCache((prev) => ({ ...prev, [currentUserId]: updatedUser }))
       }
+    } catch (err) {
+      console.error(err)
     }
   }
 
-  function handleJoinProject(e: React.FormEvent) {
-    e.preventDefault()
-    if (!activeProject || !memberNameInput.trim()) return
-    const trimmed = memberNameInput.trim()
-    setCurrentMember(trimmed)
-    upsertProject((project) => ({
-      ...project,
-      members: ensureMemberList(project.members, trimmed),
-    }))
+  const handleRemoveMember = async (memberId: string) => {
+    if (!activeProject || !currentUserId || activeProject.ownerId !== currentUserId || memberId === currentUserId) return
+    if (!window.confirm(`Remove ${getUserName(memberId)} from project?`)) return
+
+    await upsertProjectAsyncById(activeProject.id, (p) => {
+      const cleanedTasks = p.tasks.map((t) => {
+        // Preserve completed tasks as-is
+        if (t.status === 'done') return t
+
+        const filteredMembers = t.members.filter((m) => m !== memberId)
+        const wasOwner = t.takenBy === memberId
+        return {
+          ...t,
+          members: filteredMembers,
+          takenBy: wasOwner ? null : t.takenBy,
+          status: wasOwner && t.status === 'in_progress' ? 'open' : t.status,
+        }
+      })
+
+      return {
+        ...p,
+        members: p.members.filter((m) => m !== memberId),
+        tasks: cleanedTasks,
+      }
+    })
   }
 
-  function handleCreateTask(e: React.FormEvent) {
+  const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt) return
-    const now = new Date().toISOString()
-    const status: TaskStatus = taskForm.owners.length > 0 ? 'not_started' : 'unassigned'
+    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt || !currentUserId) return
     const newTask: Task = {
       id: uuid(),
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
-      owners: taskForm.owners.map((o) => o.trim()),
-      difficulty: (taskForm.difficulty as Task['difficulty']) || '',
-      status,
-      activity: [
-        createActivity(
-          'created',
-          `Created by ${currentMember || 'teammate'}`.trim(),
-        ),
-      ],
-      createdAt: now,
-      updatedAt: now,
+      creatorId: currentUserId,
+      members: [],
+      takenBy: null,
+      status: 'open',
+      activity: [createActivity('created', `Posted by ${currentUserName || 'teammate'}`)],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
-
-    upsertProject((project) => {
-      let nextMembers = project.members
-      taskForm.owners.forEach((o) => {
-        nextMembers = ensureMemberList(nextMembers, o)
-      })
-      return {
-        ...project,
-        members: nextMembers,
-        tasks: [...project.tasks, newTask],
-      }
+    upsertProject((p) => {
+      return { ...p, tasks: [...p.tasks, newTask] }
     })
-
-    setTaskForm({
-      title: '',
-      description: '',
-      dueAt: '',
-      owners: [],
-      difficulty: '',
-    })
+    setTaskForm({ title: '', description: '', dueAt: '' })
     setShowTaskModal(false)
   }
 
-  function updateTask(taskId: string, updater: (task: Task) => Task) {
-    if (!activeProject) return
-    upsertProject((project) => ({
-      ...project,
-      tasks: project.tasks.map((t) => (t.id === taskId ? updater(t) : t)),
+  const handleUpdateTask = (taskId: string, updater: (t: Task) => Task) => {
+    upsertProject((p) => ({
+      ...p,
+      tasks: p.tasks.map((t) => (t.id === taskId ? updater(t) : t)),
     }))
   }
 
-  function handleDeleteTask(task: Task) {
-    if (window.confirm(`Are you sure you want to delete the task "${task.title}"?`)) {
-      if (!activeProject) return
-      upsertProject((project) => ({
-        ...project,
-        tasks: project.tasks.filter((t) => t.id !== task.id),
-      }))
-    }
-  }
-
-  function handleStatusChange(task: Task, next: TaskStatus) {
+  const handleStatusChange = (task: Task, next: TaskStatus) => {
     if (task.status === next) return
-    updateTask(task.id, (t) => ({
+    handleUpdateTask(task.id, (t) => ({
       ...t,
       status: next,
-      activity: [
-        ...t.activity,
-        createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`),
-      ],
+      doneAt: next === 'done' ? new Date().toISOString() : t.doneAt,
+      activity: [...t.activity, createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`)],
       updatedAt: new Date().toISOString(),
     }))
   }
 
-  function handleOwnerChange(task: Task, ownerName: string) {
-    if (!ownerName) return
-    const isAlreadyOwner = task.owners.includes(ownerName)
-    const nextOwners = isAlreadyOwner
-      ? task.owners.filter((o) => o !== ownerName)
-      : [...task.owners, ownerName]
-
-    updateTask(task.id, (t) => ({
+  // "Claim" - first person to claim an unclaimed task
+  const handleTakeTask = (task: Task) => {
+    if (!currentUserId || task.status !== 'open') return
+    handleUpdateTask(task.id, (t) => ({
       ...t,
-      owners: nextOwners,
-      status: nextOwners.length > 0 ? (t.status === 'unassigned' ? 'not_started' : t.status) : 'unassigned',
-      activity: [
-        ...t.activity,
-        createActivity(
-          'owner_changed',
-          isAlreadyOwner
-            ? `Removed owner: ${ownerName}`
-            : `Added owner: ${ownerName}`,
-        ),
-      ],
+      members: [...t.members, currentUserId],
+      takenBy: currentUserId, // Keep for compatibility, but all members are equal
+      status: 'in_progress',
+      activity: [...t.activity, createActivity('task_taken', `${currentUserName || 'Someone'} claimed this task`)],
       updatedAt: new Date().toISOString(),
     }))
+  }
 
-    if (activeProject && !isAlreadyOwner) {
-      upsertProject((project) => ({
-        ...project,
-        members: ensureMemberList(project.members, ownerName),
-      }))
+  // "Join" - join a task that others have already claimed
+  const handleJoinTask = (task: Task) => {
+    if (!currentUserId || task.members.includes(currentUserId)) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      members: [...t.members, currentUserId],
+      activity: [...t.activity, createActivity('member_joined', `${currentUserName || 'Someone'} joined`)],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  // "Leave" - leave a task you're part of
+  const handleLeaveTask = (task: Task) => {
+    if (!currentUserId) return
+    handleUpdateTask(task.id, (t) => {
+      const newMembers = t.members.filter(m => m !== currentUserId)
+      // If no members left, task goes back to unclaimed (open)
+      const newStatus = newMembers.length === 0 ? 'open' : t.status
+      const newTakenBy = newMembers.length === 0 ? null : (t.takenBy === currentUserId ? newMembers[0] : t.takenBy)
+      return {
+        ...t,
+        members: newMembers,
+        takenBy: newTakenBy,
+        status: newStatus,
+        activity: [...t.activity, createActivity('member_left', `${currentUserName || 'Someone'} left`)],
+        updatedAt: new Date().toISOString(),
+      }
+    })
+  }
+
+  const handleDueChange = (task: Task, next: string) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      dueAt: next,
+      activity: [...t.activity, createActivity('due_changed', `Due date updated to ${formatDue(next)}`)],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleDescriptionChange = (task: Task, next: string) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      description: next,
+      activity: [...t.activity, createActivity('description_changed', 'Description edited')],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleAddComment = (task: Task, text: string) => {
+    if (!currentUserId || !text.trim()) return
+    const newComment = {
+      id: uuid(),
+      authorId: currentUserId,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: [...(t.comments || []), newComment],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleUpdateComment = (task: Task, commentId: string, text: string) => {
+    if (!text.trim()) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: (t.comments || []).map((c) =>
+        c.id === commentId ? { ...c, text: text.trim(), updatedAt: new Date().toISOString() } : c,
+      ),
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleDeleteComment = (task: Task, commentId: string) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      comments: (t.comments || []).filter((c) => c.id !== commentId),
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  const handleDeleteTask = (task: Task) => {
+    if (window.confirm(`Delete task "${task.title}"?`)) {
+      upsertProject((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== task.id) }))
     }
   }
 
-  function handleDueChange(task: Task, next: string) {
-    if (!next || task.dueAt === next) return
-    updateTask(task.id, (t) => ({
+  const handleNudge = async (task: Task) => {
+    if (task.members.length === 0) return alert('No one has claimed this task yet!')
+    
+    // Check cooldown (3 hours)
+    if (!canNudge(task)) {
+      const nextNudge = getNextNudgeTime(task)
+      if (nextNudge) {
+        const hoursLeft = Math.ceil((nextNudge.getTime() - new Date().getTime()) / (1000 * 60 * 60))
+        return alert(`Please wait ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} before nudging again to avoid spamming team members (3h cooldown).`)
+      }
+    }
+    
+    const due = formatDue(task.dueAt)
+    
+    // Get emails from all members
+    const emails = task.members.map((m) => userCache[m]?.email).filter(Boolean) as string[]
+    if (emails.length === 0) return alert('No emails found!')
+
+    try {
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
+      await sendNudgeEmails({
+        taskTitle: task.title,
+        dueAt: due,
+        recipientEmails: emails,
+        senderName: currentUserName || 'Teammate',
+      })
+      // Store the nudge timestamp
+      handleUpdateTask(task.id, (t) => ({
+        ...t,
+        lastNudgedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
+      setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
+    } catch (err) {
+      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'error' }))
+      setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
+    }
+  }
+
+  const handleToggleTaskPin = (task: Task) => {
+    handleUpdateTask(task.id, (t) => ({
       ...t,
-      dueAt: next,
-      activity: [
-        ...t.activity,
-        createActivity('due_changed', `Due date updated to ${formatDue(next)}`),
-      ],
+      isPinned: !t.isPinned,
       updatedAt: new Date().toISOString(),
     }))
   }
 
-  function handleDescriptionChange(task: Task, next: string) {
-    updateTask(task.id, (t) => ({
-      ...t,
-      description: next,
-      activity: [
-        ...t.activity,
-        createActivity('description_changed', 'Description edited'),
-      ],
-      updatedAt: new Date().toISOString(),
-    }))
+  const handleOpenDeleteModal = (project: Project) => {
+    setDeleteTarget({ id: project.id, name: project.name, isOwner: project.ownerId === currentUserId })
+    setDeleteConfirmCode(Math.random().toString(36).slice(2, 8).toUpperCase())
+    setDeleteConfirmInput('')
   }
 
-  function copyLink(link: string) {
-    if (!link) return
-    navigator.clipboard?.writeText(link).catch(() => {})
+  const handleExecuteDelete = async () => {
+    if (!deleteTarget) return
+    const targetId = deleteTarget.id
+    const isOwner = deleteTarget.isOwner
+
+    // If leaving the active project, clear active project first to prevent auto-join useEffect
+    if (activeProjectId === targetId) {
+      handleGoToOverview()
+    }
+
+    if (isOwner) {
+      await deleteProject(targetId)
+    } else {
+      await upsertProjectAsyncById(targetId, (p) => ({
+        ...p,
+        members: p.members.filter((m) => m !== currentUserId),
+      }))
+    }
+    setDeleteTarget(null)
   }
 
-  function copyNudge(task: Task) {
-    const message = `Hey — “${task.title}” is due ${formatDue(task.dueAt)}. Can you start it or update the status?`
-    navigator.clipboard?.writeText(message).catch(() => {})
-  }
+  useEffect(() => {
+    localStorage.setItem('taskpulse-filter', filter)
+  }, [filter])
 
-  if (resolvedView === 'create') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-        <div className="mx-auto max-w-xl px-4 py-12 space-y-8">
-          <header className="text-center space-y-2">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">
-              TaskPulse
-            </p>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Create a Project</h1>
-            <p className="text-sm font-medium text-slate-500">
-              Set up your team in seconds. No accounts, no hassle.
-            </p>
-          </header>
+  useEffect(() => {
+    localStorage.setItem('taskpulse-showdone', String(showDone))
+  }, [showDone])
 
-          <section className="rounded-[2.5rem] bg-white p-8 shadow-xl shadow-slate-200 border border-slate-100">
-            <form className="space-y-6" onSubmit={handleCreateProject}>
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-700 ml-1">
-                  Project Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  required
-                  name="project-name"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
-                  placeholder="e.g. CS394 Final Project"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-bold text-slate-700 ml-1">
-                  Course / Class <span className="text-slate-400 font-normal text-xs">(optional)</span>
-                </label>
-                <input
-                  name="project-course"
-                  value={newProject.course}
-                  onChange={(e) => setNewProject((p) => ({ ...p, course: e.target.value }))}
-                  className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-3.5 text-sm font-medium transition-all focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-amber-50"
-                  placeholder="e.g. Agile Software Development"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Create Project & Get Link
-              </button>
-            </form>
-          </section>
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+      document.body.classList.add('dark')
+      localStorage.setItem('taskpulse-theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark')
+      localStorage.setItem('taskpulse-theme', 'light')
+    }
+  }, [darkMode])
 
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={goToOverview}
-              className="group inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              Back to Overview
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (resolvedView === 'overview') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-        <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
-          <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-600">
-                TaskPulse
-              </p>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Your Projects</h1>
-              <p className="text-sm font-medium text-slate-500 max-w-md">
-                A birds-eye view of all your group projects and their current status.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={goToCreate}
-              className="inline-flex items-center gap-2 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-black text-white shadow-lg shadow-amber-200 transition-all hover:bg-amber-500 hover:-translate-y-0.5 active:translate-y-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              New Project
-            </button>
-          </header>
-
-          {projects.length === 0 ? (
-            <section className="rounded-[2.5rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">No projects yet</h3>
-              <p className="mt-2 text-slate-500 max-w-xs mx-auto text-sm font-medium">
-                Create your first project to start tracking tasks and coordinating with your team.
-              </p>
-              <button
-                onClick={goToCreate}
-                className="mt-8 rounded-xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
-              >
-                Get Started
-              </button>
-            </section>
-          ) : (
-            <section className="grid gap-6 md:grid-cols-2">
-              {projects.map((project) => {
-                const stats = projectStats(project)
-                return (
-                  <div
-                    key={project.id}
-                    className="group relative rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-1 min-w-0">
-                        <h2 className="text-xl font-black text-slate-900 truncate tracking-tight">{project.name}</h2>
-                        {project.course && (
-                          <p className="text-sm font-bold text-amber-600 truncate">{project.course}</p>
-                        )}
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
-                          {project.tasks.length} tasks · {project.members.length} members
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => goToProject(project.id)}
-                          className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-colors"
-                        >
-                          OPEN
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteProject(project.id, project.name)}
-                          className="shrink-0 rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-black text-rose-600 hover:bg-rose-100 transition-colors"
-                          title="Delete Project"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid grid-cols-2 gap-3">
-                      <div className="rounded-2xl bg-slate-50 p-3 border border-slate-100">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Progress</p>
-                        <div className="mt-1 flex items-baseline gap-1">
-                          <p className="text-lg font-black text-slate-900">{stats.percentDone}%</p>
-                          <p className="text-[10px] font-bold text-slate-400">DONE</p>
-                        </div>
-                        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
-                          <div 
-                            className="h-full bg-emerald-500 transition-all duration-500" 
-                            style={{ width: `${stats.percentDone}%` }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="rounded-2xl bg-amber-50 p-3 border border-amber-100">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">Due Soon</p>
-                        <p className="mt-1 text-lg font-black text-amber-900">{stats.dueSoon}</p>
-                        <p className="text-[10px] font-bold text-amber-700/60">NEXT 48H</p>
-                      </div>
-
-                      <div className="rounded-2xl bg-rose-50 p-3 border border-rose-100">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-rose-600">At Risk</p>
-                        <p className="mt-1 text-lg font-black text-rose-900">{stats.atRisk}</p>
-                        <p className="text-[10px] font-bold text-rose-700/60">NOT STARTED</p>
-                      </div>
-
-                      <div className="rounded-2xl bg-rose-900 p-3">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-rose-300">Overdue</p>
-                        <p className="mt-1 text-lg font-black text-white">{stats.overdue}</p>
-                        <p className="text-[10px] font-bold text-rose-400">CRITICAL</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </section>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // Project dashboard view (task-first, single project)
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
-      {/* VS Code Style Sidebar / Narrow Strip */}
-      {activeProject && (
-        <aside 
-          className={`${showSidebar ? 'w-80' : 'w-16'} border-r border-slate-200 bg-white flex flex-col h-full shrink-0 z-20 shadow-xl shadow-slate-200/50 transition-all duration-300 ease-in-out relative`}
-        >
-          {/* Toggle Button - VS Code Style */}
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all shadow-sm z-30 group"
-          >
-            <svg 
-              className={`transition-transform duration-300 ${showSidebar ? 'rotate-0' : 'rotate-180'}`} 
-              xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
-            >
-              <path d="m15 18-6-6 6-6"/>
-            </svg>
-          </button>
-
-          <div className="flex flex-col h-full overflow-hidden">
-            {/* Sidebar Header */}
-            <div className={`p-6 border-b border-slate-100 flex flex-col transition-all duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 scale-90'}`}>
-              {showSidebar && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Project Info</p>
-                    <button
-                      onClick={() => handleDeleteProject(activeProject.id, activeProject.name)}
-                      className="p-1 rounded-md text-slate-300 hover:text-rose-500 transition-colors"
-                      title="Delete Project"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                    </button>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight truncate">{activeProject.name}</h3>
-                    {activeProject.course && (
-                      <p className="mt-1 text-sm font-bold text-amber-600 truncate">{activeProject.course}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 pt-4">
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tasks</p>
-                      <p className="text-lg font-black text-slate-900">{activeProject.tasks.length}</p>
-                    </div>
-                    <div className="h-8 w-px bg-slate-100" />
-                    <div className="text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team</p>
-                      <p className="text-lg font-black text-slate-900">{activeProject.members.length}</p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Collapsed State Icon - Show when NOT showSidebar */}
-            {!showSidebar && (
-              <div className="flex flex-col items-center py-6 gap-6 transition-all duration-300">
-                <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-amber-200">
-                  {activeProject.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex flex-col gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
-                    <p className="text-[8px] font-black text-slate-400 leading-none">{activeProject.tasks.length}</p>
-                    <p className="text-[6px] font-bold text-slate-400 uppercase">TKS</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex flex-col items-center justify-center border border-slate-200">
-                    <p className="text-[8px] font-black text-slate-400 leading-none">{activeProject.members.length}</p>
-                    <p className="text-[6px] font-bold text-slate-400 uppercase">MEM</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sidebar Scrollable Content */}
-            <div className={`flex-1 overflow-y-auto p-6 space-y-8 transition-all duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-              {showSidebar && (
-                <>
-                  {/* Teammates Section */}
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Teammates</p>
-                    {memberList.length === 0 ? (
-                      <p className="text-sm italic text-slate-400 font-medium px-1">No one has joined yet.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {memberList.map((member) => (
-                          <div
-                            key={member}
-                            className={`flex items-center gap-3 p-2 rounded-xl border-2 transition-all ${
-                              member === currentMember
-                                ? 'bg-amber-50 border-amber-200 shadow-sm'
-                                : 'bg-slate-50 border-transparent hover:border-slate-100'
-                            }`}
-                          >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
-                              member === currentMember ? 'bg-amber-200 text-amber-700' : 'bg-slate-200 text-slate-500'
-                            }`}>
-                              {member.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-sm font-bold text-slate-700 truncate">
-                              {member} {member === currentMember && '(You)'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Dynamic Join/Profile Section */}
-                  <div className="pt-4 border-t border-slate-100">
-                    {!currentMember ? (
-                      <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 space-y-3">
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight">Join the Team</h4>
-                          <p className="text-[11px] font-bold text-amber-800/70">Enter your name to start.</p>
-                        </div>
-                        <form className="space-y-2" onSubmit={handleJoinProject}>
-                          <input
-                            required
-                            name="member-name"
-                            value={memberNameInput}
-                            onChange={(e) => setMemberNameInput(e.target.value)}
-                            className="w-full rounded-xl border-2 border-amber-100 bg-white px-3 py-2 text-sm font-bold focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-200/20"
-                            placeholder="Your name"
-                          />
-                          <button
-                            type="submit"
-                            className="w-full rounded-xl bg-amber-600 px-3 py-2 text-xs font-black text-white hover:bg-amber-500 shadow-lg shadow-amber-200/50 transition-all"
-                          >
-                            JOIN PROJECT
-                          </button>
-                        </form>
-                      </div>
-                    ) : (
-                      <div className="p-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">My Profile</p>
-                        <div className="mt-3 flex items-center justify-between group">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                            <span className="text-sm font-black text-slate-900 truncate">{currentMember}</span>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setCurrentMember('')
-                              setMemberNameInput('')
-                            }}
-                            className="text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Sidebar Footer */}
-            <div className={`p-6 bg-slate-50 border-t border-slate-100 transition-all duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-              {showSidebar && (
-                <button
-                  onClick={goToOverview}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-white border-2 border-slate-200 p-3 text-xs font-black text-slate-600 hover:border-slate-900 hover:text-slate-900 transition-all"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                  BACK TO PROJECTS
-                </button>
-              )}
-            </div>
-
-            {/* Collapsed State Overview Button */}
-            {!showSidebar && (
-              <div className="p-3 mb-4 mt-auto flex flex-col items-center">
-                <button
-                  onClick={goToOverview}
-                  className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg hover:bg-slate-800 transition-all"
-                  title="Back to Overview"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
+    <>
+      {resolvedView === 'login' && (
+        <LoginView
+          loginForm={loginForm}
+          setLoginForm={setLoginForm}
+          onLogin={handleLogin}
+          loginError={loginError}
+        />
       )}
-
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-        {/* Top Bar */}
-        {activeProject && (
-          <header className="h-20 border-b border-slate-200 bg-white flex items-center justify-between px-4 md:px-12 shrink-0 z-10 shadow-sm">
-            <div className="flex items-center gap-4 md:gap-8 min-w-0">
-              <div className="min-w-0">
-                <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">Project</p>
-                <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md">
-                  {activeProject.name}
-                </h1>
-              </div>
+      {resolvedView === 'create' && (
+        <CreateProjectView
+          newProject={newProject}
+          setNewProject={setNewProject}
+          onCreateProject={handleCreateProject}
+          onGoToOverview={handleGoToOverview}
+        />
+      )}
+      {resolvedView === 'overview' && (
+        <ProjectOverviewView
+          currentUserName={currentUserName}
+          currentUserId={currentUserId}
+          userProjects={userProjects}
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode(!darkMode)}
+          onLogout={logout}
+          onGoToCreate={handleGoToCreate}
+          onGoToProject={handleGoToProject}
+          onOpenDeleteModal={handleOpenDeleteModal}
+        />
+      )}
+      {resolvedView === 'invite' && activeProject && (
+        <InviteView
+          project={activeProject}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
+          loginError={loginError}
+          onJoin={async (name, emailInput) => {
+            setLoginError(null)
+            const email = emailInput.trim().toLowerCase()
+            try {
+              let userId: string
+              const existingUser = await getUserByEmail(email)
               
-              <div className="h-10 w-px bg-slate-100 hidden sm:block" />
-              
-              <div className="flex flex-col gap-1 min-w-0">
-                <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Invite Link</p>
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <p className="hidden sm:block text-xs font-bold text-slate-600 truncate max-w-[100px] lg:max-w-[300px]">
-                    {projectShareLink(activeProject.id)}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => copyLink(projectShareLink(activeProject.id))}
-                    className="p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-900 transition-all flex items-center gap-2"
-                    title="Copy Link"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">Copy Link</span>
-                  </button>
-                </div>
-              </div>
+              if (existingUser) {
+                userId = existingUser.id
+                const updatedUser = { ...existingUser, name, updatedAt: new Date().toISOString() }
+                if (existingUser.name !== name) await saveUser(updatedUser)
+                setUserCache((prev) => ({ ...prev, [userId]: updatedUser }))
+              } else {
+                userId = uuid()
+                const newUser: User = {
+                  id: userId,
+                  name,
+                  email,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+                await saveUser(newUser)
+              setUserCache((prev) => ({ ...prev, [userId]: newUser }))
+            }
+            
+            login(userId, name)
+          } catch (err) {
+            setLoginError('Failed to join project.')
+          }
+        }}
+          onConfirmJoin={async () => {
+            if (currentUserId && activeProject) {
+              await upsertProjectAsyncById(activeProject.id, (p) => ({
+                ...p,
+                members: ensureMemberList(p.members, currentUserId)
+              }))
+            }
+          }}
+          onDeclineJoin={handleGoToOverview}
+          onSwitchUser={() => logout()}
+          onGoBack={handleGoToOverview}
+        />
+      )}
+      {resolvedView === 'project' && (
+        activeProject ? (
+          <ProjectDashboardView
+            activeProject={activeProject}
+            isLoadingProject={isLoadingProject}
+            currentUserId={currentUserId}
+            currentUserName={currentUserName}
+            memberList={memberList}
+            getUserName={getUserName}
+            filter={filter}
+            setFilter={setFilter}
+            showDone={showDone}
+            setShowDone={setShowDone}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            tasksForView={tasksForView}
+            expandedTasks={expandedTasks}
+            setExpandedTasks={setExpandedTasks}
+            nudgeFeedback={nudgeFeedback}
+            showSidebar={showSidebar}
+            setShowSidebar={setShowSidebar}
+            onRemoveMember={handleRemoveMember}
+            onOpenDeleteModal={handleOpenDeleteModal}
+            onGoToOverview={handleGoToOverview}
+            onCopyLink={(link) => navigator.clipboard?.writeText(link)}
+            onShowTaskModal={() => setShowTaskModal(true)}
+            onStatusChange={handleStatusChange}
+            onTakeTask={handleTakeTask}
+            onJoinTask={handleJoinTask}
+            onLeaveTask={handleLeaveTask}
+            onDueChange={handleDueChange}
+            onDescriptionChange={handleDescriptionChange}
+            onAddComment={handleAddComment}
+            onUpdateComment={handleUpdateComment}
+            onDeleteComment={handleDeleteComment}
+            onDeleteTask={handleDeleteTask}
+            onNudge={handleNudge}
+            onUpdateUserName={handleUpdateUserName}
+            onTogglePin={handleToggleTaskPin}
+            onOpenAI={() => setAiOpen(true)}
+            aiContextHint={aiContextHint}
+          />
+        ) : isLoadingProject ? (
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+            <div className="text-center space-y-4">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-amber-500 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+              <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Loading Project...</p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowTaskModal(true)}
-                className="rounded-xl bg-emerald-600 px-5 md:px-8 py-3 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
-              >
-                <span className="hidden sm:inline">ADD TASK</span>
-                <span className="sm:hidden">+ TASK</span>
-              </button>
-            </div>
-          </header>
-        )}
-
-        <div className="flex-1 overflow-y-auto px-4 pt-6 pb-12 md:px-12">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {!activeProject ? (
-              <section className="rounded-[3rem] border-4 border-dashed border-slate-200 bg-white p-16 text-center">
-                <h3 className="text-2xl font-black text-slate-900">Project not found</h3>
-                <p className="mt-2 font-bold text-slate-400">The project link might be broken or expired.</p>
-                <button
-                  onClick={goToOverview}
-                  className="mt-8 rounded-2xl bg-slate-900 px-8 py-3 text-sm font-black text-white hover:bg-slate-800 transition-all"
-                >
-                  BACK TO OVERVIEW
-                </button>
-              </section>
-            ) : (
-              <div className="space-y-6 pb-20">
-                <div className="flex flex-wrap items-center gap-2">
-                  {(Object.keys(filterLabels) as FilterKey[]).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setFilter(key)}
-                      className={`rounded-xl px-5 py-2.5 text-xs font-black transition-all ${
-                        filter === key
-                          ? 'bg-slate-900 text-white shadow-xl shadow-slate-200'
-                          : 'bg-white text-slate-500 hover:bg-slate-100 border-2 border-slate-100'
-                      }`}
-                    >
-                      {filterLabels[key].toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-6">
-                  {tasksForView.length === 0 ? (
-                    <div className="py-20 text-center rounded-[3rem] border-4 border-dashed border-slate-100">
-                      <p className="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">No tasks found</p>
-                      <p className="mt-1 text-xs font-bold text-slate-400">Try adjusting your filters or add a task.</p>
-                    </div>
-                  ) : (
-                    tasksForView.map((task) => {
-                      const derived = deriveStatus(task)
-                      const isRisk = isAtRisk(task)
-                      const soon = isDueSoon(task)
-                      const overdue = isOverdue(task)
-                      
-                      return (
-                        <div
-                          key={task.id}
-                          className={`group relative rounded-[2.5rem] border-2 transition-all duration-300 ${
-                            overdue 
-                              ? 'border-rose-100 bg-rose-50/20' 
-                              : isRisk 
-                                ? 'border-amber-100 bg-amber-50/20' 
-                                : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-xl hover:shadow-slate-200/50'
-                          } p-6 md:p-8`}
-                        >
-                          <div className="flex flex-col gap-6">
-                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                              <div className="space-y-3 min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-sm ${statusPills[derived]}`}>
-                                    {statusLabels[derived]}
-                                  </span>
-                                  {soon && !overdue && (
-                                    <span className="rounded-lg bg-amber-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
-                                      DUE SOON
-                                    </span>
-                                  )}
-                                  {isRisk && (
-                                    <span className="rounded-lg bg-rose-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm animate-pulse">
-                                      AT RISK
-                                    </span>
-                                  )}
-                                  {task.difficulty && (
-                                    <span className="rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black text-white shadow-sm">
-                                      {task.difficulty}
-                                    </span>
-                                  )}
-                                </div>
-                                <h4 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                                  {task.title}
-                                </h4>
-                                {task.description && (
-                                  <p className="text-sm font-bold text-slate-500 line-clamp-2 leading-relaxed">
-                                    {task.description}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="shrink-0 flex flex-row md:flex-col items-center md:items-end gap-3">
-                                {isRisk && (
-                                  <button
-                                    type="button"
-                                    onClick={() => copyNudge(task)}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all hover:-translate-y-1"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                                    NUDGE
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }))}
-                                  className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all"
-                                >
-                                  <svg className={`transition-transform duration-300 ${expandedTasks[task.id] ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTask(task)}
-                                  className="rounded-xl border-2 border-slate-100 p-2.5 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all"
-                                  title="Delete Task"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
-                              <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owners</p>
-                                <div className="flex flex-wrap gap-1.5 min-h-[42px] p-2 rounded-2xl border-2 border-slate-50 bg-slate-50">
-                                  {task.owners.length === 0 ? (
-                                    <span className="text-[10px] font-bold text-slate-400 p-1">Unassigned</span>
-                                  ) : (
-                                    task.owners.map((owner) => (
-                                      <span 
-                                        key={owner}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black text-slate-700 shadow-sm"
-                                      >
-                                        {owner}
-                                        <button 
-                                          onClick={() => handleOwnerChange(task, owner)}
-                                          className="text-slate-300 hover:text-rose-500 transition-colors"
-                                        >
-                                          ×
-                                        </button>
-                                      </span>
-                                    ))
-                                  )}
-                                  <select
-                                    value=""
-                                    onChange={(e) => handleOwnerChange(task, e.target.value)}
-                                    className="bg-transparent border-none text-[10px] font-black text-slate-400 focus:outline-none cursor-pointer w-16"
-                                  >
-                                    <option value="">+ Add</option>
-                                    {[...new Set([...activeProject.members, currentMember].filter(Boolean))].filter(m => !task.owners.includes(m)).map(
-                                      (member) => (
-                                        <option key={member} value={member}>
-                                          {member}
-                                        </option>
-                                      ),
-                                    )}
-                                  </select>
-                                </div>
-                              </div>
-
-                              <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Status</p>
-                                <select
-                                  value={task.status}
-                                  onChange={(e) => handleStatusChange(task, e.target.value as TaskStatus)}
-                                  className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-xs font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                >
-                                  <option value="unassigned">Unassigned</option>
-                                  <option value="not_started">Not Started</option>
-                                  <option value="in_progress">In Progress</option>
-                                  <option value="done">Done</option>
-                                </select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Due Date</p>
-                                <input
-                                  type="datetime-local"
-                                  value={task.dueAt}
-                                  onChange={(e) => handleDueChange(task, e.target.value)}
-                                  className="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-[11px] font-black text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                                />
-                              </div>
-                            </div>
-
-                            {expandedTasks[task.id] && (
-                              <div className="mt-4 space-y-8 rounded-[2rem] bg-slate-50 border-2 border-slate-100 p-8 animate-in slide-in-from-top-4 duration-300">
-                                <div className="space-y-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-6 bg-amber-400 rounded-full" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
-                                      Activity Log
-                                    </p>
-                                  </div>
-                                  <div className="space-y-4 pl-3 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                                    {task.activity.map((item) => (
-                                      <div key={item.id} className="relative pl-6">
-                                        <div className="absolute left-[-5px] top-1.5 h-2.5 w-2.5 rounded-full bg-white border-2 border-slate-300" />
-                                        <div className="space-y-1">
-                                          <div className="flex flex-wrap items-center gap-3">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 px-2 py-0.5 bg-slate-200 rounded-md">
-                                              {item.type.replace('_', ' ')}
-                                            </span>
-                                            <span className="text-[10px] font-black text-slate-400">
-                                              {formatDue(item.at).toUpperCase()}
-                                            </span>
-                                          </div>
-                                          <p className="text-sm font-bold text-slate-600">{item.note}</p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="space-y-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-6 bg-slate-900 rounded-full" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
-                                      Detailed Notes
-                                    </p>
-                                  </div>
-                                  <textarea
-                                    value={task.description}
-                                    onChange={(e) => handleDescriptionChange(task, e.target.value)}
-                                    className="w-full rounded-[2rem] border-2 border-white bg-white p-6 text-sm font-bold text-slate-700 focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none shadow-sm"
-                                    placeholder="Add more details or updates for the team..."
-                                    rows={5}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      </main>
-
-      {/* Task Creation Modal */}
-      {showTaskModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="New task"
-            className="w-full max-w-xl rounded-[3rem] bg-white p-10 shadow-2xl transition-all animate-in fade-in zoom-in duration-300"
-          >
-            <div className="flex items-start justify-between">
+        ) : (
+          <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+            <div className="text-center space-y-6 max-w-sm px-6">
+              <div className="text-6xl animate-bounce">🕵️‍♂️</div>
               <div className="space-y-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600">TaskPulse</p>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Add a Task</h3>
-                <p className="text-sm font-bold text-slate-500">
-                  Keep it clear so the team knows what to do.
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase">Project Not Found</h2>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                  This project might have been deleted or the link is incorrect.
                 </p>
               </div>
               <button
-                type="button"
-                onClick={() => setShowTaskModal(false)}
-                className="rounded-full bg-slate-50 p-3 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                onClick={handleGoToOverview}
+                className="w-full py-3 px-6 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-slate-200 dark:shadow-none"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                Back to Overview
               </button>
             </div>
-            
-            <form className="mt-10 space-y-6" onSubmit={handleCreateTask}>
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Task Title <span className="text-rose-500">*</span></label>
-                <input
-                  required
-                  name="task-title"
-                  value={taskForm.title}
-                  onChange={(e) => setTaskForm((t) => ({ ...t, title: e.target.value }))}
-                  className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                  placeholder="e.g. Write report introduction"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Due Date <span className="text-rose-500">*</span></label>
-                  <input
-                    required
-                    type="datetime-local"
-                    name="task-due"
-                    value={taskForm.dueAt}
-                    onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
-                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-[13px] font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Difficulty</label>
-                  <select
-                    name="task-difficulty"
-                    value={taskForm.difficulty}
-                    onChange={(e) => setTaskForm((t) => ({ ...t, difficulty: e.target.value }))}
-                    className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all"
-                  >
-                    <option value="">Select...</option>
-                    <option value="S">S (Tiny)</option>
-                    <option value="M">M (Medium)</option>
-                    <option value="L">L (Big)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Owners</label>
-                <div className="flex flex-wrap gap-2 p-4 rounded-[1.5rem] border-2 border-slate-50 bg-slate-50">
-                  {[...new Set([...(activeProject?.members || []), currentMember].filter(Boolean))].map((member) => (
-                    <button
-                      key={member}
-                      type="button"
-                      onClick={() => {
-                        setTaskForm((t) => ({
-                          ...t,
-                          owners: t.owners.includes(member)
-                            ? t.owners.filter((o) => o !== member)
-                            : [...t.owners, member],
-                        }))
-                      }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                        taskForm.owners.includes(member)
-                          ? 'bg-amber-500 text-white shadow-md'
-                          : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
-                      }`}
-                    >
-                      {member}
-                    </button>
-                  ))}
-                  <input
-                    className="bg-transparent border-none focus:outline-none text-xs font-black w-24 ml-2"
-                    placeholder="+ Add Name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        const val = e.currentTarget.value.trim()
-                        if (val && !taskForm.owners.includes(val)) {
-                          setTaskForm((t) => ({ ...t, owners: [...t.owners, val] }))
-                          e.currentTarget.value = ''
-                        }
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Description</label>
-                <textarea
-                  name="task-description"
-                  value={taskForm.description}
-                  onChange={(e) => setTaskForm((t) => ({ ...t, description: e.target.value }))}
-                  rows={3}
-                  className="w-full rounded-[1.5rem] border-2 border-slate-50 bg-slate-50 px-6 py-4 text-sm font-black focus:border-amber-400 focus:bg-white focus:outline-none transition-all resize-none"
-                  placeholder="Add some details..."
-                />
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowTaskModal(false)}
-                  className="flex-1 rounded-[1.5rem] border-2 border-slate-100 px-6 py-4 text-sm font-black text-slate-500 hover:bg-slate-50 transition-colors"
-                >
-                  CANCEL
-                </button>
-                <button
-                  type="submit"
-                  className="flex-[1.5] rounded-[1.5rem] bg-slate-900 px-6 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 transition-all"
-                >
-                  CREATE TASK
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
+        )
       )}
-    </div>
+
+      <Suspense fallback={null}>
+        {showTaskModal && (
+          <TaskCreationModal
+            taskForm={taskForm}
+            setTaskForm={setTaskForm}
+            onSubmit={handleCreateTask}
+            onClose={() => setShowTaskModal(false)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {deleteTarget && (
+          <DeleteConfirmationModal
+            deleteTarget={deleteTarget}
+            deleteConfirmCode={deleteConfirmCode}
+            deleteConfirmInput={deleteConfirmInput}
+            setDeleteConfirmInput={setDeleteConfirmInput}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleExecuteDelete}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <AiChatModal
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          projectName={activeProject?.name}
+          contextHint={aiContextHint}
+        />
+      </Suspense>
+    </>
   )
 }
 
