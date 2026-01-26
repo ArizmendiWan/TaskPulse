@@ -1,10 +1,11 @@
-export type TaskDifficulty = 'S' | 'M' | 'L' | ''
-export type TaskStatus = 'unassigned' | 'not_started' | 'in_progress' | 'done'
+export type TaskStatus = 'open' | 'in_progress' | 'done'
 
 export type ActivityType =
   | 'created'
   | 'status_changed'
-  | 'owner_changed'
+  | 'member_joined'
+  | 'member_left'
+  | 'task_taken'
   | 'due_changed'
   | 'description_changed'
 
@@ -28,12 +29,14 @@ export interface Task {
   title: string
   description: string
   dueAt: string
-  owners: string[]
-  difficulty: TaskDifficulty
+  creatorId: string
+  members: string[] // people who have joined the task
+  takenBy: string | null // the person who took responsibility
   status: TaskStatus
   activity: ActivityItem[]
   comments?: Comment[]
   isPinned?: boolean
+  lastNudgedAt?: string // timestamp of last nudge sent
   createdAt: string
   updatedAt: string
 }

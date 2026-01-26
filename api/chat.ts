@@ -1,5 +1,5 @@
 type ChatPayload = {
-  messages: { role: 'user' | 'assistant'; content: string }[]
+  messages: { role: 'user' | 'assistant' | 'system'; content: string }[]
 }
 
 export default async function handler(req: any, res: any) {
@@ -28,8 +28,8 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: messages,
+        model: 'gpt-4o',
+        messages,
       }),
     })
 
@@ -46,4 +46,3 @@ export default async function handler(req: any, res: any) {
     res.status(500).json({ error: e?.message || String(e) })
   }
 }
-

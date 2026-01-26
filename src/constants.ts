@@ -1,30 +1,30 @@
 import type { ActivityItem, Project } from './types'
-import { filterDueSoon, filterAtRisk, filterOverdue } from './lib/taskUtils'
+import { filterDueSoon, filterOpen, filterOverdue } from './lib/taskUtils'
 import { theme } from './theme'
 
-export type FilterKey = 'all' | 'mine' | 'dueSoon' | 'atRisk' | 'overdue'
+export type FilterKey = 'all' | 'mine' | 'open' | 'dueSoon' | 'overdue'
 
 export const statusLabels: Record<string, string> = {
-  unassigned: 'Unassigned',
-  not_started: 'Not Started',
+  open: 'Unclaimed',
   in_progress: 'In Progress',
   done: 'Done',
+  expired: 'Expired',
   overdue: 'Overdue',
 }
 
 export const statusPills: Record<string, string> = {
-  unassigned: theme.colors.status.unassigned.pill,
-  not_started: theme.colors.status.not_started.pill,
+  open: theme.colors.status.unassigned.pill, // reuse unassigned style for open
   in_progress: theme.colors.status.in_progress.pill,
   done: theme.colors.status.done.pill,
+  expired: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
   overdue: theme.colors.status.overdue.pill,
 }
 
 export const filterLabels: Record<FilterKey, string> = {
   all: 'All',
   mine: 'My Tasks',
-  dueSoon: 'Due Soon (<48h)',
-  atRisk: 'At Risk',
+  open: 'Unclaimed',
+  dueSoon: 'Due Soon',
   overdue: 'Overdue',
 }
 
@@ -61,8 +61,8 @@ export function projectStats(project: Project) {
   const done = project.tasks.filter((t) => t.status === 'done').length
   const percentDone = total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100))
   const dueSoon = filterDueSoon(project.tasks).length
-  const atRisk = filterAtRisk(project.tasks).length
+  const unclaimed = filterOpen(project.tasks).length
   const overdue = filterOverdue(project.tasks).length
-  return { total, done, percentDone, dueSoon, atRisk, overdue }
+  return { total, done, percentDone, dueSoon, unclaimed, overdue }
 }
 

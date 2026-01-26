@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { chatWithAI, type ChatMsg } from './service'
 import { theme } from '../../theme'
+import { DEFAULT_SYSTEM_PROMPT } from './utils'
 
 export function AiChatWidget({
   projectName,
@@ -17,9 +20,7 @@ export function AiChatWidget({
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
       role: 'assistant',
-      content: `Hi! I'm your TaskPulse AI assistant${
-        projectName ? ` for “${projectName}”` : ''
-      }. Ask me anything about your project or tasks.`,
+      content: `Hi! I'm your TaskPulse AI assistant${projectName ? ` for **${projectName}**` : ''}.\n\nI can help you:\n- Spot overdue / due soon tasks and suggest next steps.\n- Show how to post, claim/join, pin, filter, hide done, or send nudges.\n- Draft quick updates or reminders.\n\nWhat do you need?`,
     },
   ])
 
@@ -40,12 +41,8 @@ export function AiChatWidget({
     return () => clearTimeout(timer)
   }, [open, messages])
 
-  const systemHint = useMemo(() => {
-    const parts: string[] = []
-    if (projectName) parts.push(`Project: ${projectName}`)
-    if (contextHint) parts.push(contextHint)
-    return parts.join('\n')
-  }, [projectName, contextHint])
+  const markdownClass =
+    'leading-relaxed text-sm space-y-2 [&>p]:m-0 [&>ul]:pl-5 [&>ol]:pl-5 [&>ul]:list-disc [&>ol]:list-decimal [&>li]:mt-1 [&>strong]:font-black [&>code]:bg-slate-100 [&>code]:text-[13px] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded dark:[&>code]:bg-slate-800'
 
   const send = async () => {
     const text = input.trim()
@@ -60,13 +57,13 @@ export function AiChatWidget({
     setMessages(next)
 
     try {
-      // Keep only last 20 messages for context
+      // Keep only last 20 conversation messages (excludes system prompt)
       const windowed = next.slice(-20)
 
-      // Add project context to the first user message in this request if available
-      const payload: ChatMsg[] = systemHint
-        ? [{ role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` }, ...windowed.slice(0, -1)]
-        : windowed
+      const payload: ChatMsg[] = [
+        { role: 'system', content: contextHint || DEFAULT_SYSTEM_PROMPT },
+        ...windowed,
+      ]
 
       const reply = await chatWithAI(payload)
       setMessages((prev) => [...prev, { role: 'assistant', content: reply || '(Empty response)' }])
@@ -90,7 +87,7 @@ export function AiChatWidget({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-8 right-8 z-50 rounded-2xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} px-6 py-4 text-xs font-black tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-3`}
+        className={`fixed bottom-4 md:bottom-8 right-4 md:right-8 z-50 rounded-2xl ${theme.colors.action.primary.bg} ${theme.colors.action.primary.text} px-5 md:px-6 py-3.5 md:py-4 text-[10px] md:text-xs font-black tracking-widest shadow-2xl transition-all hover:-translate-y-1 active:translate-y-0 flex items-center gap-2 md:gap-3`}
         title="AI Chat"
       >
         <div className={`w-2 h-2 rounded-full ${busy ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
@@ -99,8 +96,8 @@ export function AiChatWidget({
       
       {/* Chat Window */}
       {open && (
-        <div className={`fixed bottom-28 right-8 z-50 w-[380px] max-w-[92vw] rounded-[2.5rem] ${theme.colors.ui.surface} border-2 ${theme.colors.ui.border} shadow-2xl overflow-hidden flex flex-col transition-all animate-in fade-in slide-in-from-bottom-4 duration-300`}>
-          <div className={`px-6 py-5 border-b ${theme.colors.ui.border} flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30`}>
+        <div className={`fixed bottom-20 md:bottom-28 right-4 md:right-8 z-50 w-[calc(100%-2rem)] sm:w-[380px] max-w-[92vw] rounded-[2rem] md:rounded-[2.5rem] ${theme.colors.ui.surface} border-2 ${theme.colors.ui.border} shadow-2xl overflow-hidden flex flex-col transition-all animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+          <div className={`px-5 md:px-6 py-4 md:py-5 border-b ${theme.colors.ui.border} flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30`}>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">
                 TaskPulse AI
@@ -132,16 +129,24 @@ export function AiChatWidget({
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm leading-relaxed ${
-                    m.role === 'user'
-                      ? 'bg-slate-900 dark:bg-amber-600 text-white'
-                      : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
-                  }`}
-                >
-                  {m.content}
-                </div>
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm leading-relaxed ${
+                  m.role === 'user'
+                    ? 'bg-slate-900 dark:bg-amber-600 text-white'
+                    : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
+                }`}
+              >
+                  {m.role === 'assistant' ? (
+                    <div className={markdownClass}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{m.content}</span>
+                  )}
               </div>
-            ))}
+            </div>
+          ))}
 
             {busy && (
               <div className="flex justify-start">
@@ -189,4 +194,3 @@ export function AiChatWidget({
     </>
   )
 }
-

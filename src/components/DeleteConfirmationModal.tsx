@@ -66,7 +66,7 @@ export const DeleteConfirmationModal = ({
                 : 'bg-rose-300 dark:bg-rose-900/40 dark:text-rose-700/60 cursor-not-allowed'
             }`}
           >
-            Confirm
+            {deleteTarget.isOwner ? 'Delete Project' : 'Leave Project'}
           </button>
         </div>
       </div>

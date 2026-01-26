@@ -1,13 +1,14 @@
-import { useMemo, useState, useEffect } from 'react'
-import type React from 'react'
+import React, { useMemo, useState, useEffect, Suspense } from 'react'
 import type { Project, Task, TaskStatus, User } from './types'
 import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
 import { sendNudgeEmails } from './utilities/emailService'
 import {
-  filterAtRisk,
   filterDueSoon,
+  filterOpen,
   filterOverdue,
   formatDue,
+  canNudge,
+  getNextNudgeTime,
 } from './lib/taskUtils'
 import {
   type FilterKey,
@@ -23,10 +24,16 @@ import { LoginView } from './components/LoginView'
 import { CreateProjectView } from './components/CreateProjectView'
 import { ProjectOverviewView } from './components/ProjectOverviewView'
 import { ProjectDashboardView } from './components/ProjectDashboardView'
-import { TaskCreationModal } from './components/TaskCreationModal'
-import { DeleteConfirmationModal } from './components/DeleteConfirmationModal'
+const TaskCreationModal = React.lazy(() =>
+  import('./components/TaskCreationModal').then((m) => ({ default: m.TaskCreationModal }))
+)
+const DeleteConfirmationModal = React.lazy(() =>
+  import('./components/DeleteConfirmationModal').then((m) => ({ default: m.DeleteConfirmationModal }))
+)
 import { InviteView } from './components/InviteView'
-import { AiChatModal } from './features/ai/AiChatModal'
+const AiChatModal = React.lazy(() =>
+  import('./features/ai/AiChatModal').then((m) => ({ default: m.AiChatModal }))
+)
 import { generateAiContextHint } from './features/ai/utils'
 
 function App() {
@@ -73,11 +80,14 @@ function App() {
     title: '',
     description: '',
     dueAt: '',
-    owners: [] as string[],
-    difficulty: '',
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768
+    }
+    return true
+  })
   const [aiOpen, setAiOpen] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
   const [nudgeFeedback, setNudgeFeedback] = useState<Record<string, 'sending' | 'sent' | 'error' | null>>({})
@@ -94,6 +104,22 @@ function App() {
     if (!currentUserId || !activeProject) return false
     return activeProject.members.includes(currentUserId)
   }, [currentUserId, activeProject])
+
+  const prevProjectId = React.useRef(activeProjectId)
+  const prevIsMember = React.useRef(isMember)
+
+  useEffect(() => {
+    // Detect if user lost membership of the CURRENT project (was kicked or left)
+    const sameProject = prevProjectId.current === activeProjectId
+    const lostMembership = prevIsMember.current && !isMember
+    
+    if (view === 'project' && activeProject && sameProject && lostMembership && !isLoadingProject) {
+      handleGoToOverview()
+    }
+    
+    prevProjectId.current = activeProjectId
+    prevIsMember.current = isMember
+  }, [activeProjectId, isMember, view, activeProject, isLoadingProject])
 
   const resolvedView =
     !currentUserId && (view === 'overview' || view === 'create')
@@ -126,16 +152,40 @@ function App() {
     return uniqueIds
   }, [activeProject, userCache])
 
+  // Track task status changes to refresh AI context only when status updates
+  const taskStatusSignature = useMemo(() => {
+    if (!activeProject) return ''
+    return activeProject.tasks
+      .map((t) => `${t.id}:${t.status}`)
+      .sort()
+      .join('|')
+  }, [activeProject])
+
+  const aiContextHint = useMemo(() => {
+    if (!activeProject) return undefined
+    return generateAiContextHint(activeProject, currentUserName, getUserName, memberList)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?.id, taskStatusSignature, currentUserName, getUserName, memberList])
+
   const tasksForView = useMemo(() => {
     if (!activeProject) return []
     let base = [...activeProject.tasks]
 
     // Apply status filter
     switch (filter) {
-      case 'mine': base = base.filter((t) => t.owners.includes(currentUserId || '')); break
-      case 'dueSoon': base = base.filter((t) => filterDueSoon([t]).length > 0); break
-      case 'atRisk': base = base.filter((t) => filterAtRisk([t]).length > 0); break
-      case 'overdue': base = base.filter((t) => filterOverdue([t]).length > 0); break
+      case 'mine': 
+        // Only show tasks where user is a member (has claimed or joined)
+        base = base.filter((t) => t.members.includes(currentUserId || ''))
+        break
+      case 'open': 
+        base = base.filter((t) => filterOpen([t]).length > 0)
+        break
+      case 'dueSoon': 
+        base = base.filter((t) => filterDueSoon([t]).length > 0)
+        break
+      case 'overdue': 
+        base = base.filter((t) => filterOverdue([t]).length > 0)
+        break
     }
 
     // Filter out done tasks if needed
@@ -269,33 +319,50 @@ function App() {
   const handleRemoveMember = async (memberId: string) => {
     if (!activeProject || !currentUserId || activeProject.ownerId !== currentUserId || memberId === currentUserId) return
     if (!window.confirm(`Remove ${getUserName(memberId)} from project?`)) return
-    await upsertProjectAsyncById(activeProject.id, (p) => ({
-      ...p,
-      members: p.members.filter((m) => m !== memberId),
-    }))
+
+    await upsertProjectAsyncById(activeProject.id, (p) => {
+      const cleanedTasks = p.tasks.map((t) => {
+        // Preserve completed tasks as-is
+        if (t.status === 'done') return t
+
+        const filteredMembers = t.members.filter((m) => m !== memberId)
+        const wasOwner = t.takenBy === memberId
+        return {
+          ...t,
+          members: filteredMembers,
+          takenBy: wasOwner ? null : t.takenBy,
+          status: wasOwner && t.status === 'in_progress' ? 'open' : t.status,
+        }
+      })
+
+      return {
+        ...p,
+        members: p.members.filter((m) => m !== memberId),
+        tasks: cleanedTasks,
+      }
+    })
   }
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt) return
+    if (!activeProject || !taskForm.title.trim() || !taskForm.dueAt || !currentUserId) return
     const newTask: Task = {
       id: uuid(),
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
-      owners: taskForm.owners,
-      difficulty: (taskForm.difficulty as Task['difficulty']) || '',
-      status: taskForm.owners.length > 0 ? 'not_started' : 'unassigned',
-      activity: [createActivity('created', `Created by ${currentUserName || 'teammate'}`)],
+      creatorId: currentUserId,
+      members: [],
+      takenBy: null,
+      status: 'open',
+      activity: [createActivity('created', `Posted by ${currentUserName || 'teammate'}`)],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
     upsertProject((p) => {
-      let members = p.members
-      taskForm.owners.forEach((o) => (members = ensureMemberList(members, o)))
-      return { ...p, members, tasks: [...p.tasks, newTask] }
+      return { ...p, tasks: [...p.tasks, newTask] }
     })
-    setTaskForm({ title: '', description: '', dueAt: '', owners: [], difficulty: '' })
+    setTaskForm({ title: '', description: '', dueAt: '' })
     setShowTaskModal(false)
   }
 
@@ -316,17 +383,47 @@ function App() {
     }))
   }
 
-  const handleOwnerChange = (task: Task, ownerId: string) => {
-    const isAlreadyOwner = task.owners.includes(ownerId)
-    const nextOwners = isAlreadyOwner ? task.owners.filter((o) => o !== ownerId) : [...task.owners, ownerId]
+  // "Claim" - first person to claim an unclaimed task
+  const handleTakeTask = (task: Task) => {
+    if (!currentUserId || task.status !== 'open') return
     handleUpdateTask(task.id, (t) => ({
       ...t,
-      owners: nextOwners,
-      status: nextOwners.length > 0 ? (t.status === 'unassigned' ? 'not_started' : t.status) : 'unassigned',
-      activity: [...t.activity, createActivity('owner_changed', isAlreadyOwner ? `Removed owner: ${getUserName(ownerId)}` : `Added owner: ${getUserName(ownerId)}`)],
+      members: [...t.members, currentUserId],
+      takenBy: currentUserId, // Keep for compatibility, but all members are equal
+      status: 'in_progress',
+      activity: [...t.activity, createActivity('task_taken', `${currentUserName || 'Someone'} claimed this task`)],
       updatedAt: new Date().toISOString(),
     }))
-    if (!isAlreadyOwner) upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, ownerId) }))
+  }
+
+  // "Join" - join a task that others have already claimed
+  const handleJoinTask = (task: Task) => {
+    if (!currentUserId || task.members.includes(currentUserId)) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      members: [...t.members, currentUserId],
+      activity: [...t.activity, createActivity('member_joined', `${currentUserName || 'Someone'} joined`)],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
+  // "Leave" - leave a task you're part of
+  const handleLeaveTask = (task: Task) => {
+    if (!currentUserId) return
+    handleUpdateTask(task.id, (t) => {
+      const newMembers = t.members.filter(m => m !== currentUserId)
+      // If no members left, task goes back to unclaimed (open)
+      const newStatus = newMembers.length === 0 ? 'open' : t.status
+      const newTakenBy = newMembers.length === 0 ? null : (t.takenBy === currentUserId ? newMembers[0] : t.takenBy)
+      return {
+        ...t,
+        members: newMembers,
+        takenBy: newTakenBy,
+        status: newStatus,
+        activity: [...t.activity, createActivity('member_left', `${currentUserName || 'Someone'} left`)],
+        updatedAt: new Date().toISOString(),
+      }
+    })
   }
 
   const handleDueChange = (task: Task, next: string) => {
@@ -389,9 +486,21 @@ function App() {
   }
 
   const handleNudge = async (task: Task) => {
-    if (task.owners.length === 0) return alert('Assign someone first!')
+    if (task.members.length === 0) return alert('No one has claimed this task yet!')
+    
+    // Check cooldown (3 hours)
+    if (!canNudge(task)) {
+      const nextNudge = getNextNudgeTime(task)
+      if (nextNudge) {
+        const hoursLeft = Math.ceil((nextNudge.getTime() - new Date().getTime()) / (1000 * 60 * 60))
+        return alert(`Please wait ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} before nudging again to avoid spamming team members (3h cooldown).`)
+      }
+    }
+    
     const due = formatDue(task.dueAt)
-    const emails = task.owners.map((o) => userCache[o]?.email).filter(Boolean) as string[]
+    
+    // Get emails from all members
+    const emails = task.members.map((m) => userCache[m]?.email).filter(Boolean) as string[]
     if (emails.length === 0) return alert('No emails found!')
 
     try {
@@ -402,6 +511,12 @@ function App() {
         recipientEmails: emails,
         senderName: currentUserName || 'Teammate',
       })
+      // Store the nudge timestamp
+      handleUpdateTask(task.id, (t) => ({
+        ...t,
+        lastNudgedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     } catch (err) {
@@ -444,14 +559,6 @@ function App() {
     }
     setDeleteTarget(null)
   }
-
-  // Auto-join if visitor has projectId but not in members
-  useEffect(() => {
-    // Only auto-join if we are currently in the project view
-    if (view === 'project' && currentUserId && activeProject && !activeProject.members.includes(currentUserId)) {
-      upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, currentUserId) }))
-    }
-  }, [currentUserId, activeProject, view])
 
   useEffect(() => {
     localStorage.setItem('taskpulse-filter', filter)
@@ -532,34 +639,29 @@ function App() {
                   updatedAt: new Date().toISOString(),
                 }
                 await saveUser(newUser)
-                setUserCache((prev) => ({ ...prev, [userId]: newUser }))
-              }
-              
-              // Join the project and clean up any old IDs with same email
-              await upsertProjectAsyncById(activeProject.id, (p) => {
-                const filtered = p.members.filter(mId => 
-                  mId === userId || userCache[mId]?.email?.toLowerCase() !== email
-                )
-                return { ...p, members: ensureMemberList(filtered, userId) }
-              })
-              
-              login(userId, name)
-            } catch (err) {
-              setLoginError('Failed to join project.')
+              setUserCache((prev) => ({ ...prev, [userId]: newUser }))
             }
-          }}
+            
+            // Join the project
+            await upsertProjectAsyncById(activeProject.id, (p) => ({
+              ...p,
+              members: ensureMemberList(p.members, userId)
+            }))
+            
+            login(userId, name)
+          } catch (err) {
+            setLoginError('Failed to join project.')
+          }
+        }}
           onConfirmJoin={async () => {
             if (currentUserId && activeProject) {
-              const myEmail = userCache[currentUserId]?.email?.toLowerCase()
-              
-              await upsertProjectAsyncById(activeProject.id, (p) => {
-                const filtered = p.members.filter(mId => 
-                  mId === currentUserId || (myEmail && userCache[mId]?.email?.toLowerCase() !== myEmail)
-                )
-                return { ...p, members: ensureMemberList(filtered, currentUserId) }
-              })
+              await upsertProjectAsyncById(activeProject.id, (p) => ({
+                ...p,
+                members: ensureMemberList(p.members, currentUserId)
+              }))
             }
           }}
+          onDeclineJoin={handleGoToOverview}
           onSwitchUser={() => logout()}
           onGoBack={handleGoToOverview}
         />
@@ -591,7 +693,9 @@ function App() {
             onCopyLink={(link) => navigator.clipboard?.writeText(link)}
             onShowTaskModal={() => setShowTaskModal(true)}
             onStatusChange={handleStatusChange}
-            onOwnerChange={handleOwnerChange}
+            onTakeTask={handleTakeTask}
+            onJoinTask={handleJoinTask}
+            onLeaveTask={handleLeaveTask}
             onDueChange={handleDueChange}
             onDescriptionChange={handleDescriptionChange}
             onAddComment={handleAddComment}
@@ -602,6 +706,7 @@ function App() {
             onUpdateUserName={handleUpdateUserName}
             onTogglePin={handleToggleTaskPin}
             onOpenAI={() => setAiOpen(true)}
+            aiContextHint={aiContextHint}
           />
         ) : isLoadingProject ? (
           <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -631,44 +736,38 @@ function App() {
         )
       )}
 
-      {showTaskModal && (
-        <TaskCreationModal
-          taskForm={taskForm}
-          setTaskForm={setTaskForm}
-          activeProject={activeProject}
-          currentUserId={currentUserId}
-          getUserName={getUserName}
-          onSubmit={handleCreateTask}
-          onClose={() => setShowTaskModal(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showTaskModal && (
+          <TaskCreationModal
+            taskForm={taskForm}
+            setTaskForm={setTaskForm}
+            onSubmit={handleCreateTask}
+            onClose={() => setShowTaskModal(false)}
+          />
+        )}
+      </Suspense>
 
-      {deleteTarget && (
-        <DeleteConfirmationModal
-          deleteTarget={deleteTarget}
-          deleteConfirmCode={deleteConfirmCode}
-          deleteConfirmInput={deleteConfirmInput}
-          setDeleteConfirmInput={setDeleteConfirmInput}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={handleExecuteDelete}
-        />
-      )}
+      <Suspense fallback={null}>
+        {deleteTarget && (
+          <DeleteConfirmationModal
+            deleteTarget={deleteTarget}
+            deleteConfirmCode={deleteConfirmCode}
+            deleteConfirmInput={deleteConfirmInput}
+            setDeleteConfirmInput={setDeleteConfirmInput}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleExecuteDelete}
+          />
+        )}
+      </Suspense>
 
-      <AiChatModal
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        projectName={activeProject?.name}
-        contextHint={
-          activeProject
-            ? generateAiContextHint(
-                activeProject,
-                currentUserName,
-                getUserName,
-                memberList
-              )
-            : undefined
-        }
-      />
+      <Suspense fallback={null}>
+        <AiChatModal
+          open={aiOpen}
+          onClose={() => setAiOpen(false)}
+          projectName={activeProject?.name}
+          contextHint={aiContextHint}
+        />
+      </Suspense>
     </>
   )
 }

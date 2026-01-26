@@ -46,12 +46,12 @@ export const Sidebar = ({
   return (
     <aside
       className={`${
-        showSidebar ? 'w-80' : 'w-16'
-      } border-r ${theme.colors.ui.border} ${theme.colors.ui.surface} flex flex-col h-full shrink-0 z-20 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-300 ease-in-out relative`}
+        showSidebar ? 'translate-x-0 w-80' : '-translate-x-full w-0 md:translate-x-0 md:w-16'
+      } fixed md:relative border-r ${theme.colors.ui.border} ${theme.colors.ui.surface} flex flex-col h-full shrink-0 z-50 md:z-20 shadow-xl shadow-slate-200/50 dark:shadow-black/50 transition-all duration-300 ease-in-out`}
     >
       <button
         onClick={() => setShowSidebar(!showSidebar)}
-        className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} rounded-full flex items-center justify-center ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} hover:${theme.colors.ui.borderStrong} transition-all shadow-sm z-30 group`}
+        className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 ${theme.colors.ui.surface} border ${theme.colors.ui.borderStrong} rounded-full flex items-center justify-center ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} hover:${theme.colors.ui.borderStrong} transition-all shadow-sm z-30 group hidden md:flex`}
       >
         <svg
           className={`transition-transform duration-300 ${showSidebar ? 'rotate-0' : 'rotate-180'}`}
@@ -84,23 +84,41 @@ export const Sidebar = ({
                 <button
                   onClick={() => onOpenDeleteModal(activeProject)}
                   className={`p-1 rounded-md ${theme.colors.ui.textLight} hover:text-rose-500 transition-colors`}
-                  title="Delete Project"
+                  title={activeProject.ownerId === currentUserId ? "Delete Project" : "Leave Project"}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                  </svg>
+                  {activeProject.ownerId === currentUserId ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                  )}
                 </button>
               </div>
               <div>
@@ -123,7 +141,7 @@ export const Sidebar = ({
                 <div className={`h-8 w-px ${theme.colors.ui.border}`} />
                 <div className="text-center">
                   <p className={`text-[10px] font-black ${theme.colors.ui.textLight} uppercase tracking-widest`}>
-                    Team
+                    Members
                   </p>
                   <p className={`text-lg font-black ${theme.colors.ui.text}`}>{activeProject.members.length}</p>
                 </div>

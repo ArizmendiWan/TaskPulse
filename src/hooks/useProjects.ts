@@ -4,6 +4,27 @@ import { db } from '../lib/firebase'
 import type { Project } from '../types'
 import { saveProjects } from '../storage'
 import { getUserProjects } from '../lib/userUtils'
+import { migrateProject, projectNeedsMigration } from '../lib/taskMigration'
+
+/**
+ * Helper to migrate a project and optionally persist the migration
+ */
+function migrateAndPersist(project: Project, shouldPersist = true): Project {
+  if (!projectNeedsMigration(project)) {
+    return project
+  }
+  
+  const migrated = migrateProject(project)
+  
+  // Persist the migrated data back to Firebase
+  if (shouldPersist) {
+    setDoc(doc(db, 'projects', migrated.id), migrated).catch((err) =>
+      console.warn('Failed to persist migrated project:', err)
+    )
+  }
+  
+  return migrated
+}
 
 export const useProjects = (currentUserId: string | null, initialProjectId: string | null) => {
   const [projects, setProjects] = useState<Project[]>([])
@@ -38,7 +59,8 @@ export const useProjects = (currentUserId: string | null, initialProjectId: stri
     const unsubscribe = onSnapshot(docRef, (snapshot) => {
       setIsLoadingProject(false)
       if (snapshot.exists()) {
-        const data = snapshot.data() as Project
+        const rawData = snapshot.data() as Project
+        const data = migrateAndPersist(rawData)
         setProjects((prev) => {
           const exists = prev.some((p) => p.id === data.id)
           if (exists) {
@@ -62,7 +84,8 @@ export const useProjects = (currentUserId: string | null, initialProjectId: stri
           const docRef = doc(db, 'projects', initialProjectId)
           const snap = await getDoc(docRef)
           if (snap.exists()) {
-            const data = snap.data() as Project
+            const rawData = snap.data() as Project
+            const data = migrateAndPersist(rawData)
             setProjects((prev) => {
               if (prev.find((p) => p.id === data.id)) return prev
               return [...prev, data]
@@ -84,10 +107,12 @@ export const useProjects = (currentUserId: string | null, initialProjectId: stri
 
     const load = async () => {
       try {
-        const userProjects = await getUserProjects(currentUserId)
+        const rawUserProjects = await getUserProjects(currentUserId)
+        // Migrate all loaded projects
+        const migratedProjects = rawUserProjects.map((p) => migrateAndPersist(p))
         setProjects((prev) => {
           const merged = [...prev]
-          userProjects.forEach((up) => {
+          migratedProjects.forEach((up) => {
             if (!merged.some((p) => p.id === up.id)) {
               merged.push(up)
             }

@@ -8,6 +8,7 @@ interface InviteViewProps {
   currentUserName: string | null
   onJoin: (name: string, email: string) => void
   onConfirmJoin: () => void
+  onDeclineJoin: () => void
   onSwitchUser: () => void
   onGoBack: () => void
   loginError: string | null
@@ -19,6 +20,7 @@ export const InviteView = ({
   currentUserName,
   onJoin,
   onConfirmJoin,
+  onDeclineJoin,
   onSwitchUser,
   onGoBack,
   loginError,
@@ -53,38 +55,59 @@ export const InviteView = ({
 
         <section className={`rounded-[2.5rem] ${theme.colors.ui.surface} p-8 shadow-2xl shadow-slate-200 dark:shadow-black/50 border ${theme.colors.ui.border}`}>
           {currentUserId ? (
-            <div className="space-y-6 text-center">
-              <div className="space-y-2">
-                <p className={`text-xs font-black uppercase tracking-widest ${theme.colors.ui.textLight}`}>
-                  Active Session
+            /* Logged in user - simple Yes/No confirmation */
+            <div className="space-y-8 text-center">
+              <div className="space-y-4">
+                <p className={`text-sm font-bold ${theme.colors.ui.textMuted}`}>
+                  Join this project as
                 </p>
                 <div className="flex items-center justify-center gap-3 py-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-200 dark:shadow-none">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-amber-200/50 dark:shadow-none">
                     {currentUserName?.charAt(0).toUpperCase()}
                   </div>
+                  <div className="text-left">
                   <p className={`text-xl font-black ${theme.colors.ui.text} tracking-tight`}>
                     {currentUserName}
                   </p>
+                    <p className={`text-xs font-bold ${theme.colors.ui.textLight}`}>
+                      Ready to collaborate
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="flex gap-3">
+                <button
+                  onClick={onDeclineJoin}
+                  className={`flex-1 rounded-2xl border-2 ${theme.colors.ui.border} px-4 py-4 text-sm font-black ${theme.colors.ui.textMuted} hover:${theme.colors.ui.background} hover:border-rose-200 hover:text-rose-600 transition-all`}
+                >
+                  NO, GO BACK
+                </button>
                 <button
                   onClick={onConfirmJoin}
-                  className={`w-full rounded-2xl ${theme.colors.action.primary.bg} px-4 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl transition-all ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0`}
+                  className={`flex-1 rounded-2xl ${theme.colors.action.primary.bg} px-4 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl transition-all ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0`}
                 >
-                  JOIN THIS PROJECT
-                </button>
-                <button
-                  onClick={onSwitchUser}
-                  className={`mt-6 text-[10px] font-black ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} uppercase tracking-[0.2em] transition-colors block w-full text-center`}
-                >
-                  Not you? Switch account
+                  YES, JOIN
                 </button>
               </div>
+
+              <button
+                onClick={onSwitchUser}
+                className={`text-[10px] font-black ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} uppercase tracking-[0.2em] transition-colors`}
+              >
+                Not {currentUserName}? Switch account
+              </button>
             </div>
           ) : (
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            /* Not logged in - show login form with project context */
+            <div className="space-y-6">
+              <div className={`text-center pb-4 border-b ${theme.colors.ui.border}`}>
+                <p className={`text-xs font-black uppercase tracking-widest ${theme.colors.ui.textLight}`}>
+                  Sign in to join
+                </p>
+              </div>
+
+              <form className="space-y-5" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
                   Your Name
@@ -121,15 +144,16 @@ export const InviteView = ({
                 type="submit"
                 className={`w-full rounded-2xl ${theme.colors.action.primary.bg} px-4 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl transition-all ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0`}
               >
-                JOIN PROJECT
+                  SIGN IN & JOIN PROJECT
               </button>
             </form>
+            </div>
           )}
         </section>
 
         <div className="flex flex-col items-center gap-8">
           <p className={`text-center text-[11px] font-bold ${theme.colors.ui.textLight} px-8 leading-relaxed`}>
-            By joining, you'll be able to see tasks, track deadlines, and nudge teammates in <span className="text-amber-600 uppercase tracking-tight">{project.name}</span>.
+            By joining, you'll be able to see tasks, take responsibility, and collaborate with the team in <span className="text-amber-600 font-black">{project.name}</span>.
           </p>
           
           <button
