@@ -8,27 +8,22 @@ export const TaskActivitySection = ({ task }: TaskActivityProps) => {
   if (!task.activity || task.activity.length === 0) return null
 
   return (
-    <div className={`mt-8 pt-6 border-t ${theme.colors.ui.border}`}>
+    <div className={`mt-3 pt-3 border-t ${theme.colors.ui.border}`}>
       <button
         onClick={() => setShowHistory(!showHistory)}
-        className="flex items-center justify-between w-full group"
+        className="flex items-center gap-2 w-full group"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
-          <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.text}`}>
-            Activity
-          </p>
-          <span className={`ml-2 px-2 py-0.5 rounded-full ${theme.colors.ui.background} text-[10px] font-black ${theme.colors.ui.textMuted}`}>
-            {task.activity.length}
-          </span>
-        </div>
+        <p className={`text-[9px] font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>
+          Activity
+        </p>
+        <span className={`px-1.5 py-0.5 rounded-full ${theme.colors.ui.background} text-[9px] font-black ${theme.colors.ui.textMuted}`}>
+          {task.activity.length}
+        </span>
         <svg
-          className={`transition-transform duration-300 ${theme.colors.ui.textLight} group-hover:${theme.colors.ui.textMuted} ${
-            showHistory ? 'rotate-180' : ''
-          }`}
+          className={`ml-auto transition-transform duration-200 ${theme.colors.ui.textLight} ${showHistory ? 'rotate-180' : ''}`}
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          width="12"
+          height="12"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -41,26 +36,20 @@ export const TaskActivitySection = ({ task }: TaskActivityProps) => {
       </button>
 
       {showHistory && (
-        <div className={`mt-6 relative ml-0.5 space-y-6 before:absolute before:left-[7px] before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:${theme.colors.ui.border} animate-in fade-in slide-in-from-top-4 duration-300`}>
+        <div className="mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
           {task.activity
             .slice()
             .reverse()
             .map((item) => (
-              <div key={item.id} className="relative pl-8">
-                <div className={`absolute left-0 top-1.5 h-[16px] w-[16px] rounded-full border-2 ${theme.colors.ui.surface} ${theme.colors.ui.borderStrong} ring-4 ${theme.colors.ui.surface}`} />
-                <div className="flex flex-col gap-1">
-                  <p className={`text-[11px] font-bold ${theme.colors.ui.textMuted} leading-relaxed`}>
-                    {item.note}
-                  </p>
-                  <p className={`text-[9px] font-black ${theme.colors.ui.textLight} uppercase tracking-widest`}>
-                    {new Date(item.at).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </div>
+              <div key={item.id} className="flex items-start gap-2 text-[11px]">
+                <span className={`shrink-0 w-1 h-1 mt-1.5 rounded-full bg-slate-300 dark:bg-slate-600`} />
+                <span className={`${theme.colors.ui.textMuted}`}>{item.note}</span>
+                <span className={`ml-auto shrink-0 text-[9px] ${theme.colors.ui.textLight}`}>
+                  {new Date(item.at).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
               </div>
             ))}
         </div>
@@ -68,4 +57,3 @@ export const TaskActivitySection = ({ task }: TaskActivityProps) => {
     </div>
   )
 }
-
