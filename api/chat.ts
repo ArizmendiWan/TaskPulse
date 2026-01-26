@@ -28,8 +28,8 @@ export default async function handler(req: any, res: any) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: messages,
+        model: 'gpt-4o',
+        messages,
       }),
     })
 

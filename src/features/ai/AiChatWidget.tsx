@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { chatWithAI, type ChatMsg } from './service'
@@ -41,8 +41,6 @@ export function AiChatWidget({
     return () => clearTimeout(timer)
   }, [open, messages])
 
-  const systemHint = useMemo(() => contextHint || DEFAULT_SYSTEM_PROMPT, [contextHint])
-
   const markdownClass =
     'leading-relaxed text-sm space-y-2 [&>p]:m-0 [&>ul]:pl-5 [&>ol]:pl-5 [&>ul]:list-disc [&>ol]:list-decimal [&>li]:mt-1 [&>strong]:font-black [&>code]:bg-slate-100 [&>code]:text-[13px] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded dark:[&>code]:bg-slate-800'
 
@@ -63,7 +61,7 @@ export function AiChatWidget({
       const windowed = next.slice(-20)
 
       const payload: ChatMsg[] = [
-        { role: 'system', content: systemHint },
+        { role: 'system', content: contextHint || DEFAULT_SYSTEM_PROMPT },
         ...windowed,
       ]
 

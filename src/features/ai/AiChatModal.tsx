@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { chatWithAI, type ChatMsg } from './service'
@@ -26,12 +26,10 @@ export function AiChatModal({
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  const systemHint = useMemo(() => contextHint || DEFAULT_SYSTEM_PROMPT, [contextHint])
-
   const markdownClass =
     'leading-relaxed text-sm space-y-2 [&>p]:m-0 [&>ul]:pl-5 [&>ol]:pl-5 [&>ul]:list-disc [&>ol]:list-decimal [&>li]:mt-1 [&>strong]:font-black [&>code]:bg-slate-100 [&>code]:text-[13px] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded dark:[&>code]:bg-slate-800'
 
-  const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading])
+  const canSend = input.trim().length > 0 && !loading
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -53,7 +51,7 @@ export function AiChatModal({
       // Keep last 20 messages (user/assistant)
       const windowed = next.slice(-20)
 
-      const payload: ChatMsg[] = [{ role: 'system', content: systemHint }, ...windowed]
+      const payload: ChatMsg[] = [{ role: 'system', content: contextHint || DEFAULT_SYSTEM_PROMPT }, ...windowed]
 
       const reply = await chatWithAI(payload)
       setMsgs((m) => [...m, { role: 'assistant', content: reply || '(Empty response)' }])
