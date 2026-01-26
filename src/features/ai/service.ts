@@ -1,4 +1,4 @@
-export type ChatMsg = { role: 'user' | 'assistant'; content: string }
+export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string }
 
 export async function chatWithAI(messages: ChatMsg[]): Promise<string> {
   const resp = await fetch('/api/chat', {
@@ -22,4 +22,3 @@ export async function chatWithAI(messages: ChatMsg[]): Promise<string> {
 
 // Compatibility with old components
 export const chat = chatWithAI
-

@@ -1,6 +1,9 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { chatWithAI, type ChatMsg } from './service'
 import { theme } from '../../theme'
+import { DEFAULT_SYSTEM_PROMPT } from './utils'
 
 export function AiChatModal({
   open,
@@ -16,21 +19,17 @@ export function AiChatModal({
   const [msgs, setMsgs] = useState<ChatMsg[]>(() => [
     {
       role: 'assistant',
-      content: `Hi! I'm your TaskPulse AI assistant${
-        projectName ? ` for “${projectName}”` : ''
-      }. How can I help you today?`,
+      content: `Hi! I'm your TaskPulse AI assistant${projectName ? ` for **${projectName}**` : ''}.\n\nI can help you:\n- Spot overdue / due soon tasks and next steps.\n- Explain how to post, claim/join, pin, filter, hide done, or send nudges.\n- Draft quick updates or reminders.\n\nWhat do you need?`,
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  const systemHint = useMemo(() => {
-    const parts: string[] = []
-    if (projectName) parts.push(`Project: ${projectName}`)
-    if (contextHint) parts.push(contextHint)
-    return parts.join('\n')
-  }, [projectName, contextHint])
+  const systemHint = useMemo(() => contextHint || DEFAULT_SYSTEM_PROMPT, [contextHint])
+
+  const markdownClass =
+    'leading-relaxed text-sm space-y-2 [&>p]:m-0 [&>ul]:pl-5 [&>ol]:pl-5 [&>ul]:list-disc [&>ol]:list-decimal [&>li]:mt-1 [&>strong]:font-black [&>code]:bg-slate-100 [&>code]:text-[13px] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded dark:[&>code]:bg-slate-800'
 
   const canSend = useMemo(() => input.trim().length > 0 && !loading, [input, loading])
 
@@ -51,16 +50,10 @@ export function AiChatModal({
     setLoading(true)
 
     try {
-      // Keep last 20 messages
+      // Keep last 20 messages (user/assistant)
       const windowed = next.slice(-20)
 
-      // Inject context into the request
-      const payload: ChatMsg[] = systemHint
-        ? [
-            { role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` },
-            ...windowed.slice(0, -1),
-          ]
-        : windowed
+      const payload: ChatMsg[] = [{ role: 'system', content: systemHint }, ...windowed]
 
       const reply = await chatWithAI(payload)
       setMsgs((m) => [...m, { role: 'assistant', content: reply || '(Empty response)' }])
@@ -101,7 +94,15 @@ export function AiChatModal({
                   : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
               }`}
             >
-              {m.content}
+              {m.role === 'assistant' ? (
+                <div className={markdownClass}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {m.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <span className="whitespace-pre-wrap">{m.content}</span>
+              )}
             </div>
           ))}
           {loading && (
@@ -138,4 +139,3 @@ export function AiChatModal({
     </div>
   )
 }
-

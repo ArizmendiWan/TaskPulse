@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { chatWithAI, type ChatMsg } from './service'
 import { theme } from '../../theme'
+import { DEFAULT_SYSTEM_PROMPT } from './utils'
 
 export function AiChatWidget({
   projectName,
@@ -17,9 +20,7 @@ export function AiChatWidget({
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
       role: 'assistant',
-      content: `Hi! I'm your TaskPulse AI assistant${
-        projectName ? ` for “${projectName}”` : ''
-      }. Ask me anything about your project or tasks.`,
+      content: `Hi! I'm your TaskPulse AI assistant${projectName ? ` for **${projectName}**` : ''}.\n\nI can help you:\n- Spot overdue / due soon tasks and suggest next steps.\n- Show how to post, claim/join, pin, filter, hide done, or send nudges.\n- Draft quick updates or reminders.\n\nWhat do you need?`,
     },
   ])
 
@@ -40,12 +41,10 @@ export function AiChatWidget({
     return () => clearTimeout(timer)
   }, [open, messages])
 
-  const systemHint = useMemo(() => {
-    const parts: string[] = []
-    if (projectName) parts.push(`Project: ${projectName}`)
-    if (contextHint) parts.push(contextHint)
-    return parts.join('\n')
-  }, [projectName, contextHint])
+  const systemHint = useMemo(() => contextHint || DEFAULT_SYSTEM_PROMPT, [contextHint])
+
+  const markdownClass =
+    'leading-relaxed text-sm space-y-2 [&>p]:m-0 [&>ul]:pl-5 [&>ol]:pl-5 [&>ul]:list-disc [&>ol]:list-decimal [&>li]:mt-1 [&>strong]:font-black [&>code]:bg-slate-100 [&>code]:text-[13px] [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded dark:[&>code]:bg-slate-800'
 
   const send = async () => {
     const text = input.trim()
@@ -60,13 +59,13 @@ export function AiChatWidget({
     setMessages(next)
 
     try {
-      // Keep only last 20 messages for context
+      // Keep only last 20 conversation messages (excludes system prompt)
       const windowed = next.slice(-20)
 
-      // Add project context to the first user message in this request if available
-      const payload: ChatMsg[] = systemHint
-        ? [{ role: 'user', content: `Context:\n${systemHint}\n\nUser Question:\n${text}` }, ...windowed.slice(0, -1)]
-        : windowed
+      const payload: ChatMsg[] = [
+        { role: 'system', content: systemHint },
+        ...windowed,
+      ]
 
       const reply = await chatWithAI(payload)
       setMessages((prev) => [...prev, { role: 'assistant', content: reply || '(Empty response)' }])
@@ -132,16 +131,24 @@ export function AiChatWidget({
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm leading-relaxed ${
-                    m.role === 'user'
-                      ? 'bg-slate-900 dark:bg-amber-600 text-white'
-                      : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
-                  }`}
-                >
-                  {m.content}
-                </div>
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm leading-relaxed ${
+                  m.role === 'user'
+                    ? 'bg-slate-900 dark:bg-amber-600 text-white'
+                    : `${theme.colors.action.secondary.bg} ${theme.colors.ui.text} border ${theme.colors.ui.border}`
+                }`}
+              >
+                  {m.role === 'assistant' ? (
+                    <div className={markdownClass}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{m.content}</span>
+                  )}
               </div>
-            ))}
+            </div>
+          ))}
 
             {busy && (
               <div className="flex justify-start">
@@ -189,4 +196,3 @@ export function AiChatWidget({
     </>
   )
 }
-
