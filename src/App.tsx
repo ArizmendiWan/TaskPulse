@@ -105,6 +105,22 @@ function App() {
     return activeProject.members.includes(currentUserId)
   }, [currentUserId, activeProject])
 
+  const prevProjectId = React.useRef(activeProjectId)
+  const prevIsMember = React.useRef(isMember)
+
+  useEffect(() => {
+    // Detect if user lost membership of the CURRENT project (was kicked or left)
+    const sameProject = prevProjectId.current === activeProjectId
+    const lostMembership = prevIsMember.current && !isMember
+    
+    if (view === 'project' && activeProject && sameProject && lostMembership && !isLoadingProject) {
+      handleGoToOverview()
+    }
+    
+    prevProjectId.current = activeProjectId
+    prevIsMember.current = isMember
+  }, [activeProjectId, isMember, view, activeProject, isLoadingProject])
+
   const resolvedView =
     !currentUserId && (view === 'overview' || view === 'create')
       ? 'login'
@@ -303,10 +319,28 @@ function App() {
   const handleRemoveMember = async (memberId: string) => {
     if (!activeProject || !currentUserId || activeProject.ownerId !== currentUserId || memberId === currentUserId) return
     if (!window.confirm(`Remove ${getUserName(memberId)} from project?`)) return
-    await upsertProjectAsyncById(activeProject.id, (p) => ({
-      ...p,
-      members: p.members.filter((m) => m !== memberId),
-    }))
+
+    await upsertProjectAsyncById(activeProject.id, (p) => {
+      const cleanedTasks = p.tasks.map((t) => {
+        // Preserve completed tasks as-is
+        if (t.status === 'done') return t
+
+        const filteredMembers = t.members.filter((m) => m !== memberId)
+        const wasOwner = t.takenBy === memberId
+        return {
+          ...t,
+          members: filteredMembers,
+          takenBy: wasOwner ? null : t.takenBy,
+          status: wasOwner && t.status === 'in_progress' ? 'open' : t.status,
+        }
+      })
+
+      return {
+        ...p,
+        members: p.members.filter((m) => m !== memberId),
+        tasks: cleanedTasks,
+      }
+    })
   }
 
   const handleCreateTask = (e: React.FormEvent) => {
@@ -526,14 +560,6 @@ function App() {
     setDeleteTarget(null)
   }
 
-  // Auto-join if visitor has projectId but not in members
-  useEffect(() => {
-    // Only auto-join if we are currently in the project view
-    if (view === 'project' && currentUserId && activeProject && !activeProject.members.includes(currentUserId)) {
-      upsertProject((p) => ({ ...p, members: ensureMemberList(p.members, currentUserId) }))
-    }
-  }, [currentUserId, activeProject, view])
-
   useEffect(() => {
     localStorage.setItem('taskpulse-filter', filter)
   }, [filter])
@@ -613,32 +639,26 @@ function App() {
                   updatedAt: new Date().toISOString(),
                 }
                 await saveUser(newUser)
-                setUserCache((prev) => ({ ...prev, [userId]: newUser }))
-              }
-              
-              // Join the project and clean up any old IDs with same email
-              await upsertProjectAsyncById(activeProject.id, (p) => {
-                const filtered = p.members.filter(mId => 
-                  mId === userId || userCache[mId]?.email?.toLowerCase() !== email
-                )
-                return { ...p, members: ensureMemberList(filtered, userId) }
-              })
-              
-              login(userId, name)
-            } catch (err) {
-              setLoginError('Failed to join project.')
+              setUserCache((prev) => ({ ...prev, [userId]: newUser }))
             }
-          }}
+            
+            // Join the project
+            await upsertProjectAsyncById(activeProject.id, (p) => ({
+              ...p,
+              members: ensureMemberList(p.members, userId)
+            }))
+            
+            login(userId, name)
+          } catch (err) {
+            setLoginError('Failed to join project.')
+          }
+        }}
           onConfirmJoin={async () => {
             if (currentUserId && activeProject) {
-              const myEmail = userCache[currentUserId]?.email?.toLowerCase()
-              
-              await upsertProjectAsyncById(activeProject.id, (p) => {
-                const filtered = p.members.filter(mId => 
-                  mId === currentUserId || (myEmail && userCache[mId]?.email?.toLowerCase() !== myEmail)
-                )
-                return { ...p, members: ensureMemberList(filtered, currentUserId) }
-              })
+              await upsertProjectAsyncById(activeProject.id, (p) => ({
+                ...p,
+                members: ensureMemberList(p.members, currentUserId)
+              }))
             }
           }}
           onDeclineJoin={handleGoToOverview}

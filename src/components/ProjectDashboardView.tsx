@@ -221,9 +221,9 @@ export const ProjectDashboardView = ({
               </h1>
             </div>
 
-            <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mt-0`} />
+            <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mx-1 md:mx-4 shrink-0`} />
 
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 mr-2 md:mr-8">
               <button
                 type="button"
                 onClick={handleCopy}
