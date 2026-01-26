@@ -95,10 +95,26 @@ export const theme = {
         unchecked: 'border-slate-300 dark:border-slate-600',
       },
       nudge: {
+        // Legacy nudge button styles (not currently used)
         idle: 'bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 shadow-sm shadow-rose-200 dark:shadow-rose-900/30',
         sending: 'bg-rose-500 text-white',
-        sent: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
+        sentButton: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
         error: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50',
+        // Status badge buttons
+        overdue: {
+          active: 'bg-rose-600 text-white hover:bg-rose-500',
+          disabled: 'bg-rose-300',
+        },
+        dueSoon: {
+          active: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/30',
+          disabled: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 cursor-default',
+        },
+        sent: {
+          badge: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+        },
+        failed: {
+          badge: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50',
+        },
       },
       // Task action buttons
       task: {

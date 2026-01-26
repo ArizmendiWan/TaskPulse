@@ -36,6 +36,7 @@ export interface Task {
   activity: ActivityItem[]
   comments?: Comment[]
   isPinned?: boolean
+  lastNudgedAt?: string // timestamp of last nudge sent
   createdAt: string
   updatedAt: string
 }

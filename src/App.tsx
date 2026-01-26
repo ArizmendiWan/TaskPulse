@@ -8,6 +8,8 @@ import {
   filterOpen,
   filterOverdue,
   formatDue,
+  canNudge,
+  getNextNudgeTime,
 } from './lib/taskUtils'
 import {
   type FilterKey,
@@ -426,6 +428,16 @@ function App() {
 
   const handleNudge = async (task: Task) => {
     if (task.members.length === 0) return alert('No one has claimed this task yet!')
+    
+    // Check cooldown (3 hours)
+    if (!canNudge(task)) {
+      const nextNudge = getNextNudgeTime(task)
+      if (nextNudge) {
+        const hoursLeft = Math.ceil((nextNudge.getTime() - new Date().getTime()) / (1000 * 60 * 60))
+        return alert(`Please wait ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} before nudging again to avoid spamming team members (3h cooldown).`)
+      }
+    }
+    
     const due = formatDue(task.dueAt)
     
     // Get emails from all members
@@ -440,6 +452,12 @@ function App() {
         recipientEmails: emails,
         senderName: currentUserName || 'Teammate',
       })
+      // Store the nudge timestamp
+      handleUpdateTask(task.id, (t) => ({
+        ...t,
+        lastNudgedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     } catch (err) {

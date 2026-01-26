@@ -95,3 +95,25 @@ export function filterOverdue(tasks: Task[], now = new Date()): Task[] {
   return sortByDue(tasks.filter((t) => isOverdue(t, now)))
 }
 
+/**
+ * Check if task can be nudged (3 hour cooldown)
+ */
+export function canNudge(task: Task, now = new Date()): boolean {
+  if (!task.lastNudgedAt) return true
+  const lastNudged = new Date(task.lastNudgedAt).getTime()
+  const cooldownHours = 3
+  const cooldownMs = cooldownHours * HOUR_MS
+  return (now.getTime() - lastNudged) >= cooldownMs
+}
+
+/**
+ * Get the time when the next nudge can be sent
+ */
+export function getNextNudgeTime(task: Task): Date | null {
+  if (!task.lastNudgedAt) return null
+  const lastNudged = new Date(task.lastNudgedAt).getTime()
+  const cooldownHours = 3
+  const cooldownMs = cooldownHours * HOUR_MS
+  return new Date(lastNudged + cooldownMs)
+}
+
