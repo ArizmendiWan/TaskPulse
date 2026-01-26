@@ -651,12 +651,6 @@ function App() {
               setUserCache((prev) => ({ ...prev, [userId]: newUser }))
             }
             
-            // Join the project
-            await upsertProjectAsyncById(activeProject.id, (p) => ({
-              ...p,
-              members: ensureMemberList(p.members, userId)
-            }))
-            
             login(userId, name)
           } catch (err) {
             setLoginError('Failed to join project.')

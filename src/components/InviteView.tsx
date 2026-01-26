@@ -144,7 +144,7 @@ export const InviteView = ({
                 type="submit"
                 className={`w-full rounded-2xl ${theme.colors.action.primary.bg} px-4 py-4 text-sm font-black ${theme.colors.action.primary.text} shadow-xl transition-all ${theme.colors.action.primary.hover} hover:-translate-y-1 active:translate-y-0`}
               >
-                  SIGN IN & JOIN PROJECT
+                  SIGN IN & CONTINUE
               </button>
             </form>
             </div>
