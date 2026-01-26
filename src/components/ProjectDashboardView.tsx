@@ -1,4 +1,5 @@
 import React from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import type { Project, Task, TaskStatus } from '../types'
 import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { theme } from '../theme'
@@ -86,11 +87,86 @@ export const ProjectDashboardView = ({
   onTogglePin,
 }: ProjectDashboardViewProps) => {
   const [copyFeedback, setCopyFeedback] = React.useState(false)
+  const [showQR, setShowQR] = React.useState(false)
+  const [qrCopyFeedback, setQrCopyFeedback] = React.useState(false)
+  const qrRef = React.useRef<HTMLDivElement>(null)
 
   const handleCopy = () => {
     onCopyLink(projectShareLink(activeProject.id))
     setCopyFeedback(true)
     setTimeout(() => setCopyFeedback(false), 2000)
+  }
+
+  const shareLink = projectShareLink(activeProject.id)
+
+  const handleSaveQR = async () => {
+    const svg = qrRef.current?.querySelector('svg')
+    if (!svg) return
+
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const img = new Image()
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+
+    img.onload = () => {
+      canvas.width = 200
+      canvas.height = 200
+      ctx.fillStyle = 'white'
+      ctx.fillRect(0, 0, 200, 200)
+      ctx.drawImage(img, 20, 20, 160, 160)
+      URL.revokeObjectURL(url)
+
+      const link = document.createElement('a')
+      link.download = `${activeProject.name.replace(/\s+/g, '-')}-invite-qr.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    }
+    img.src = url
+  }
+
+  const handleCopyQR = async () => {
+    const svg = qrRef.current?.querySelector('svg')
+    if (!svg) return
+
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const img = new Image()
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+
+    img.onload = async () => {
+      canvas.width = 200
+      canvas.height = 200
+      ctx.fillStyle = 'white'
+      ctx.fillRect(0, 0, 200, 200)
+      ctx.drawImage(img, 20, 20, 160, 160)
+      URL.revokeObjectURL(url)
+
+      try {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ])
+            setQrCopyFeedback(true)
+            setTimeout(() => setQrCopyFeedback(false), 2000)
+          }
+        }, 'image/png')
+      } catch {
+        // Fallback: copy link instead
+        await navigator.clipboard.writeText(shareLink)
+        setQrCopyFeedback(true)
+        setTimeout(() => setQrCopyFeedback(false), 2000)
+      }
+    }
+    img.src = url
   }
 
   return (
@@ -111,26 +187,23 @@ export const ProjectDashboardView = ({
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <header className={`h-20 border-b ${theme.colors.ui.border} ${theme.colors.ui.surface} flex items-center justify-between px-4 md:px-12 shrink-0 z-10 shadow-sm transition-colors duration-300`}>
-          <div className="flex items-center gap-4 md:gap-8 min-w-0">
+          <div className="flex items-start gap-4 md:gap-8 min-w-0">
             <div className="min-w-0">
-              <p className="hidden md:block text-[10px] font-black uppercase tracking-[0.2em] text-amber-600 mb-0.5">
+              <p className="hidden md:block text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 mb-1">
                 Project
               </p>
-              <h1 className={`text-lg md:text-xl font-black ${theme.colors.ui.text} tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md`}>
+              <h1 className={`text-xl md:text-2xl font-black ${theme.colors.ui.text} tracking-tight truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md`}>
                 {activeProject.name}
               </h1>
             </div>
 
-            <div className={`h-10 w-px ${theme.colors.ui.border} hidden sm:block`} />
+            <div className={`h-12 w-px ${theme.colors.ui.border} hidden sm:block mt-0`} />
 
-            <div className="flex flex-col gap-1 min-w-0">
-              <p className={`hidden md:block text-[10px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight}`}>
+            <div className="min-w-0">
+              <p className={`hidden sm:block text-[9px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} mb-1`}>
                 Invite Link
               </p>
               <div className="flex items-center gap-1 sm:gap-2">
-                <p className={`hidden sm:block text-xs font-bold ${theme.colors.ui.textMuted} truncate max-w-[100px] lg:max-w-[300px]`}>
-                  {projectShareLink(activeProject.id)}
-                </p>
                 <button
                   type="button"
                   onClick={handleCopy}
@@ -139,42 +212,104 @@ export const ProjectDashboardView = ({
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800/50 dark:text-emerald-400' 
                       : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
                   }`}
-                  title="Copy Link"
+                  title="Copy invite link to clipboard"
                 >
                   {copyFeedback ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                     </svg>
                   )}
-                  <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest">
-                    {copyFeedback ? 'Copied!' : 'Copy Link'}
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    {copyFeedback ? 'Copied!' : 'Copy'}
                   </span>
                 </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowQR(!showQR)}
+                  className={`p-2 px-3 rounded-xl transition-all flex items-center gap-2 border-2 ${
+                    showQR
+                      ? 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                      : `${theme.colors.ui.background} border-transparent hover:${theme.colors.ui.borderStrong} ${theme.colors.ui.textLight} hover:${theme.colors.ui.text}`
+                  }`}
+                  title="Show QR Code"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="3" height="3" />
+                    <rect x="18" y="14" width="3" height="3" />
+                    <rect x="14" y="18" width="3" height="3" />
+                    <rect x="18" y="18" width="3" height="3" />
+                  </svg>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    QR Code
+                  </span>
+                </button>
+                {showQR && (
+                  <div className="absolute top-full right-0 mt-2 p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex flex-col items-center gap-3">
+                      <p className={`text-[10px] font-black uppercase tracking-wider ${theme.colors.ui.textMuted}`}>
+                        Scan to join {activeProject.name}
+                      </p>
+                      <div ref={qrRef} className="p-3 bg-white rounded-xl">
+                        <QRCodeSVG
+                          value={shareLink}
+                          size={160}
+                          level="M"
+                          marginSize={0}
+                        />
+                      </div>
+                      <div className="flex gap-2 w-full">
+                        <button
+                          type="button"
+                          onClick={handleSaveQR}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" x2="12" y1="15" y2="3" />
+                          </svg>
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCopyQR}
+                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                            qrCopyFeedback
+                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {qrCopyFeedback ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                              </svg>
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               </div>
             </div>
           </div>

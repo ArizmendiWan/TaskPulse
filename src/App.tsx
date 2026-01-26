@@ -6,6 +6,7 @@ import { sendNudgeEmails } from './utilities/emailService'
 import {
   filterDueSoon,
   filterOpen,
+  filterOverdue,
   formatDue,
 } from './lib/taskUtils'
 import {
@@ -138,6 +139,9 @@ function App() {
         break
       case 'dueSoon': 
         base = base.filter((t) => filterDueSoon([t]).length > 0)
+        break
+      case 'overdue': 
+        base = base.filter((t) => filterOverdue([t]).length > 0)
         break
     }
 

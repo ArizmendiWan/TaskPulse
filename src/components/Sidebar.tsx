@@ -123,7 +123,7 @@ export const Sidebar = ({
                 <div className={`h-8 w-px ${theme.colors.ui.border}`} />
                 <div className="text-center">
                   <p className={`text-[10px] font-black ${theme.colors.ui.textLight} uppercase tracking-widest`}>
-                    Team
+                    Members
                   </p>
                   <p className={`text-lg font-black ${theme.colors.ui.text}`}>{activeProject.members.length}</p>
                 </div>

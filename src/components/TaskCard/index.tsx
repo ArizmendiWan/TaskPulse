@@ -29,32 +29,39 @@ export const TaskCard = ({
   nudgeFeedback,
   currentUserId,
 }: TaskCardProps) => {
-  // Drafting System States
-  const [isEditing, setIsEditing] = useState(false)
-  const [statusDraft, setStatusDraft] = useState<TaskStatus>(task.status)
+  // Inline editing states
+  const [editingDue, setEditingDue] = useState(false)
+  const [editingDescription, setEditingDescription] = useState(false)
   const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
 
   useEffect(() => {
-    if (!isEditing) {
-      setStatusDraft(task.status)
-      setDueAtDraft(task.dueAt)
-      setDescriptionDraft(task.description)
-    }
-  }, [task, isEditing])
-
-  const handleSaveDraft = () => {
-    if (statusDraft !== task.status) onStatusChange(task, statusDraft)
-    if (dueAtDraft !== task.dueAt) onDueChange(task, dueAtDraft)
-    if (descriptionDraft !== task.description) onDescriptionChange(task, descriptionDraft)
-    setIsEditing(false)
-  }
-
-  const handleCancelDraft = () => {
-    setStatusDraft(task.status)
     setDueAtDraft(task.dueAt)
     setDescriptionDraft(task.description)
-    setIsEditing(false)
+  }, [task])
+
+  const handleSaveDue = () => {
+    if (dueAtDraft !== task.dueAt) {
+      onDueChange(task, dueAtDraft)
+    }
+    setEditingDue(false)
+  }
+
+  const handleSaveDescription = () => {
+    if (descriptionDraft !== task.description) {
+      onDescriptionChange(task, descriptionDraft)
+    }
+    setEditingDescription(false)
+  }
+
+  const handleCancelDue = () => {
+    setDueAtDraft(task.dueAt)
+    setEditingDue(false)
+  }
+
+  const handleCancelDescription = () => {
+    setDescriptionDraft(task.description)
+    setEditingDescription(false)
   }
 
   const derivedStatus = deriveStatus(task)
@@ -202,87 +209,85 @@ export const TaskCard = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Status:</span>
-                {isEditing && task.members.length > 0 ? (
-                  <select
-                    aria-label="Status"
-                    value={statusDraft}
-                    onChange={(e) => setStatusDraft(e.target.value as TaskStatus)}
-                    className={`rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-[11px] font-black ${theme.colors.ui.text} focus:outline-none`}
-                  >
-                    <option value="in_progress">In Progress</option>
-                    <option value="done">Done</option>
-                  </select>
-                ) : (
-                  <span className={`inline-flex items-center justify-center rounded-full px-2 h-5 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
-                    {statusLabels[derivedStatus]}
-                  </span>
-                )}
+                <span className={`inline-flex items-center justify-center rounded-full px-2 h-5 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
+                  {statusLabels[derivedStatus]}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Due:</span>
-                {isEditing ? (
-                  <input
-                    type="datetime-local"
-                    value={dueAtDraft}
-                    onChange={(e) => setDueAtDraft(e.target.value)}
-                    className={`rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-[11px] font-black ${theme.colors.ui.text} focus:outline-none`}
-                  />
+                {editingDue ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="datetime-local"
+                      value={dueAtDraft}
+                      onChange={(e) => setDueAtDraft(e.target.value)}
+                      onBlur={handleSaveDue}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveDue()
+                        if (e.key === 'Escape') handleCancelDue()
+                      }}
+                      autoFocus
+                      className={`rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-[11px] font-black ${theme.colors.ui.text} focus:outline-none`}
+                    />
+                  </div>
                 ) : (
-                  <span className={`font-bold ${theme.colors.ui.text}`}>{formatDue(task.dueAt)}</span>
+                  <div className="flex items-center gap-1.5 group/due">
+                    <span className={`font-bold ${theme.colors.ui.text}`}>{formatDue(task.dueAt)}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingDue(true)}
+                      className="opacity-0 group-hover/due:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                      title="Edit due date"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
+                      </svg>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Right: Actions */}
+            {/* Right: Delete button */}
             <div className="flex gap-2">
-              {!isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteTask(task)}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                    Delete
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCancelDraft}
-                    className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} hover:${theme.colors.ui.text} transition-all`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveDraft}
-                    className="flex items-center gap-1 rounded-lg px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    Save
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => onDeleteTask(task)}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                Delete
+              </button>
             </div>
           </div>
 
           {/* Description */}
           <div className="mt-3">
-            <p className={`text-[9px] font-black uppercase tracking-wider ${theme.colors.ui.textLight} mb-1.5`}>Description</p>
-            {isEditing ? (
+            <div className="flex items-center gap-1.5 mb-1.5 group/desc">
+              <p className={`text-[9px] font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Description</p>
+              {!editingDescription && (
+                <button
+                  type="button"
+                  onClick={() => setEditingDescription(true)}
+                  className="opacity-0 group-hover/desc:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                  title="Edit description"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+            {editingDescription ? (
               <textarea
                 value={descriptionDraft}
                 onChange={(e) => setDescriptionDraft(e.target.value)}
+                onBlur={handleSaveDescription}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleCancelDescription()
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveDescription()
+                }}
+                autoFocus
                 className={`w-full rounded-xl border ${theme.colors.ui.input} p-3 text-xs font-medium focus:outline-none transition-all resize-none`}
                 placeholder="Add description..."
                 rows={2}

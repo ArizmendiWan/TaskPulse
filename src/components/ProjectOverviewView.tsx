@@ -35,7 +35,7 @@ export const ProjectOverviewView = ({
               {currentUserName ? `${currentUserName}'s Projects` : 'Your Projects'}
             </h1>
             <p className={`text-sm font-medium ${theme.colors.ui.textMuted} max-w-md`}>
-              A birds-eye view of all your group projects and their current status.
+              All your group projects and their current status.
             </p>
           </div>
           <div className="flex gap-3 items-center">
@@ -205,20 +205,20 @@ export const ProjectOverviewView = ({
                       </div>
                     </div>
 
-                    <div className={`rounded-2xl ${theme.colors.status.not_started.bg} p-3 border ${theme.colors.status.not_started.border}`}>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/20 p-3 border border-rose-200 dark:border-rose-800/50">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
                         Due Soon
                       </p>
-                      <p className="mt-1 text-lg font-black text-amber-900 dark:text-amber-100">{stats.dueSoon}</p>
-                      <p className="text-[10px] font-bold text-amber-700/60 dark:text-amber-400/60">NEXT 48H</p>
+                      <p className="mt-1 text-lg font-black text-rose-900 dark:text-rose-100">{stats.dueSoon}</p>
+                      <p className="text-[10px] font-bold text-rose-700/60 dark:text-rose-400/60">NEXT 48H</p>
                     </div>
 
-                    <div className={`rounded-2xl ${theme.colors.status.overdue.bg} p-3 border ${theme.colors.status.overdue.border}`}>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                        At Risk
+                    <div className={`rounded-2xl bg-amber-50 dark:bg-amber-900/20 p-3 border border-amber-200 dark:border-amber-800/50`}>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        Unclaimed
                       </p>
-                      <p className="mt-1 text-lg font-black text-rose-900 dark:text-rose-100">{stats.atRisk}</p>
-                      <p className="text-[10px] font-bold text-rose-700/60 dark:text-rose-400/60">NOT STARTED</p>
+                      <p className="mt-1 text-lg font-black text-amber-900 dark:text-amber-100">{stats.unclaimed}</p>
+                      <p className="text-[10px] font-bold text-amber-700/60 dark:text-amber-400/60">NEEDS OWNER</p>
                     </div>
 
                     <div className="rounded-2xl bg-rose-900 dark:bg-rose-950 p-3">
