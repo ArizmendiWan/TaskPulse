@@ -35,8 +35,6 @@ interface ProjectDashboardViewProps {
   onCopyLink: (link: string) => void
   onShowTaskModal: () => void
   onStatusChange: (task: Task, next: TaskStatus) => void
-  onTakeTask: (task: Task) => void
-  onJoinTask: (task: Task) => void
   onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
@@ -45,6 +43,7 @@ interface ProjectDashboardViewProps {
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
   onNudge: (task: Task) => void
+  onAssignMembers: (task: Task, memberIds: string[]) => void
   onUpdateUserName: (newName: string) => Promise<void>
   onTogglePin: (task: Task) => void
   onOpenAI: () => void
@@ -76,8 +75,6 @@ export const ProjectDashboardView = ({
   onCopyLink,
   onShowTaskModal,
   onStatusChange,
-  onTakeTask,
-  onJoinTask,
   onLeaveTask,
   onDueChange,
   onDescriptionChange,
@@ -86,6 +83,7 @@ export const ProjectDashboardView = ({
   onDeleteComment,
   onDeleteTask,
   onNudge,
+  onAssignMembers,
   onUpdateUserName,
   onTogglePin,
 }: ProjectDashboardViewProps) => {
@@ -463,7 +461,7 @@ export const ProjectDashboardView = ({
               className="rounded-xl bg-emerald-600 px-3 md:px-8 py-2 md:py-3.5 text-xs md:text-sm font-black text-white hover:bg-emerald-500 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/20 transition-all hover:-translate-y-0.5 active:translate-y-0 shrink-0"
             >
               <span className="hidden sm:inline">POST TASK</span>
-              <span className="sm:hidden">+</span>
+              <span className="sm:hidden">POST</span>
             </button>
           </div>
         </header>
@@ -546,8 +544,6 @@ export const ProjectDashboardView = ({
                           setExpandedTasks((prev) => ({ ...prev, [id]: !prev[id] }))
                         }
                         onStatusChange={onStatusChange}
-                        onTakeTask={onTakeTask}
-                        onJoinTask={onJoinTask}
                         onLeaveTask={onLeaveTask}
                         onDueChange={onDueChange}
                         onDescriptionChange={onDescriptionChange}
@@ -556,6 +552,8 @@ export const ProjectDashboardView = ({
                         onDeleteComment={onDeleteComment}
                         onDeleteTask={onDeleteTask}
                         onNudge={onNudge}
+                        onAssignMembers={onAssignMembers}
+                        projectMembers={activeProject.members}
                         onTogglePin={onTogglePin}
                         getUserName={getUserName}
                         nudgeFeedback={nudgeFeedback}
@@ -570,8 +568,8 @@ export const ProjectDashboardView = ({
         </div>
 
         <Suspense fallback={null}>
-          <AiChatWidget
-            projectName={activeProject.name}
+        <AiChatWidget
+          projectName={activeProject.name}
             contextHint={aiContextHint}
           />
         </Suspense>

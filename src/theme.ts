@@ -125,6 +125,16 @@ export const theme = {
       },
     },
 
+    // Task card themed containers
+    taskCard: {
+      done: 'border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/30',
+      expired: 'border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 opacity-75',
+      overdue: 'border-rose-500 dark:border-rose-500 bg-rose-100 dark:bg-rose-900/70',
+      dueSoon: 'border-rose-200 dark:border-rose-800/40 bg-rose-50 dark:bg-rose-900/20',
+      unclaimed: 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20',
+      default: 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md dark:hover:shadow-black/50',
+    },
+
     // UI element colors
     ui: {
       background: 'bg-slate-50 dark:bg-slate-950',

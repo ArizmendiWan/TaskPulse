@@ -5,8 +5,6 @@ export interface TaskCardProps {
   expanded: boolean
   onToggleExpand: (taskId: string) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
-  onTakeTask: (task: Task) => void
-  onJoinTask: (task: Task) => void
   onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
@@ -17,6 +15,8 @@ export interface TaskCardProps {
   onNudge: (task: Task) => void
   onTogglePin: (task: Task) => void
   getUserName: (userId: string | null) => string
+  onAssignMembers: (task: Task, memberIds: string[]) => void
+  projectMembers: string[]
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   currentUserId: string | null
 }
@@ -36,12 +36,11 @@ export interface TaskCardHeaderProps {
 
 export interface TaskCardActionsProps {
   task: Task
-  onTakeTask: (task: Task) => void
-  onJoinTask: (task: Task) => void
   onLeaveTask: (task: Task) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
-  canClaim: boolean
-  canJoin: boolean
+  onAssignMembers: (task: Task, memberIds: string[]) => void
+  projectMembers: string[]
+  getUserName: (userId: string | null) => string
   canLeave: boolean
   isMember: boolean
   expired: boolean

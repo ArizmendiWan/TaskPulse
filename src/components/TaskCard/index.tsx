@@ -13,8 +13,6 @@ export const TaskCard = ({
   expanded,
   onToggleExpand,
   onStatusChange,
-  onTakeTask,
-  onJoinTask,
   onLeaveTask,
   onDueChange,
   onDescriptionChange,
@@ -25,6 +23,8 @@ export const TaskCard = ({
   onNudge,
   onTogglePin,
   getUserName,
+  onAssignMembers,
+  projectMembers,
   nudgeFeedback,
   currentUserId,
 }: TaskCardProps) => {
@@ -64,16 +64,15 @@ export const TaskCard = ({
   }
 
   const derivedStatus = deriveStatus(task)
+  const isDone = task.status === 'done'
   const expired = isExpired(task)
-  const overdue = isOverdue(task)
-  const dueSoon = isDueSoon(task) && !expired && !overdue
+  const overdue = isOverdue(task) && !isDone
+  const dueSoon = isDueSoon(task) && !expired && !overdue && !isDone
 
   // Simplified member model - all members are equal
   const isUnclaimed = task.status === 'open'
   const isMember = currentUserId ? task.members.includes(currentUserId) : false
   const hasClaimed = task.members.length > 0
-  const canClaim = isUnclaimed && !!currentUserId && !expired
-  const canJoin = !isUnclaimed && !!currentUserId && !isMember && task.status !== 'done' && !expired
   const canLeave = isMember && task.status !== 'done'
 
   // Get member names for display
@@ -82,13 +81,17 @@ export const TaskCard = ({
   return (
     <div
       className={`group relative rounded-2xl border transition-all duration-300 ${
-        expired
-          ? 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 opacity-75'
-          : overdue
-            ? 'border-rose-100 dark:border-rose-900/30 bg-rose-50/10 dark:bg-rose-900/10'
-            : dueSoon
-              ? 'border-amber-100 dark:border-amber-900/30 bg-amber-50/10 dark:bg-amber-900/10'
-              : `${theme.colors.ui.border} ${theme.colors.ui.surface} hover:${theme.colors.ui.borderStrong} hover:shadow-md dark:hover:shadow-black/50`
+        isDone
+          ? theme.colors.taskCard.done
+          : expired
+            ? theme.colors.taskCard.expired
+            : overdue
+              ? theme.colors.taskCard.overdue
+              : dueSoon
+                ? theme.colors.taskCard.dueSoon
+                : isUnclaimed
+                  ? theme.colors.taskCard.unclaimed
+                  : theme.colors.taskCard.default
       }`}
     >
       {/* Collapsed Header */}
@@ -154,12 +157,11 @@ export const TaskCard = ({
 
             <TaskCardActions
               task={task}
-              onTakeTask={onTakeTask}
-              onJoinTask={onJoinTask}
               onLeaveTask={onLeaveTask}
               onStatusChange={onStatusChange}
-              canClaim={canClaim}
-              canJoin={canJoin}
+              onAssignMembers={onAssignMembers}
+              projectMembers={projectMembers}
+              getUserName={getUserName}
               canLeave={canLeave}
               isMember={isMember}
               expired={expired}
@@ -208,9 +210,13 @@ export const TaskCard = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Status:</span>
-                <span className={`inline-flex items-center justify-center rounded-full px-2 h-5 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
-                  {statusLabels[derivedStatus]}
-                </span>
+                {task.status === 'in_progress' ? (
+                  <span className={`text-[11px] font-bold ${theme.colors.ui.textMuted}`}>In Progress</span>
+                ) : (
+                  <span className={`inline-flex items-center justify-center rounded-full px-2 h-5 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
+                    {statusLabels[derivedStatus]}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Due:</span>

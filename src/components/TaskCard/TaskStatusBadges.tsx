@@ -7,7 +7,6 @@ export const TaskStatusBadges = ({
   task,
   onNudge,
   nudgeFeedback,
-  isUnclaimed,
   expired,
   overdue,
   dueSoon,
@@ -32,8 +31,8 @@ export const TaskStatusBadges = ({
 
   return (
     <>
-      {/* Status badge - show IN PROGRESS or DONE only (not for unclaimed/expired/overdue) */}
-      {!isUnclaimed && !expired && !overdue && (
+      {/* Status badge - show DONE only (IN PROGRESS is implied by members) */}
+      {task.status === 'done' && (
         <span
           className={`inline-flex items-center justify-center rounded-full px-2 h-6 text-[9px] font-black uppercase tracking-wider ${statusPills[task.status]}`}
         >

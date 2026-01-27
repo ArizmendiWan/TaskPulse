@@ -6,14 +6,18 @@ interface TaskCreationModalProps {
     title: string
     description: string
     dueAt: string
+    members: string[]
   }
   setTaskForm: React.Dispatch<
     React.SetStateAction<{
       title: string
       description: string
       dueAt: string
+      members: string[]
     }>
   >
+  projectMembers: string[]
+  getUserName: (userId: string | null) => string
   onSubmit: (e: React.FormEvent) => void
   onClose: () => void
 }
@@ -21,9 +25,23 @@ interface TaskCreationModalProps {
 export const TaskCreationModal = ({
   taskForm,
   setTaskForm,
+  projectMembers,
+  getUserName,
   onSubmit,
   onClose,
 }: TaskCreationModalProps) => {
+  const toggleMember = (memberId: string) => {
+    setTaskForm((prev) => {
+      const isAssigned = prev.members.includes(memberId)
+      return {
+        ...prev,
+        members: isAssigned
+          ? prev.members.filter((id) => id !== memberId)
+          : [...prev.members, memberId],
+      }
+    })
+  }
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
       <div
@@ -90,15 +108,45 @@ export const TaskCreationModal = ({
               >
                 Due Date <span className="text-rose-500">*</span>
               </label>
-              <input
-                id="task-due"
-                required
-                type="datetime-local"
-                name="task-due"
-                value={taskForm.dueAt}
-                onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
-                className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
-              />
+            <input
+              id="task-due"
+              required
+              type="datetime-local"
+              name="task-due"
+              value={taskForm.dueAt}
+              onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
+              className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.colors.ui.textLight} ml-1`}>
+              Assign To
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {projectMembers.map((memberId) => {
+                const isAssigned = taskForm.members.includes(memberId)
+                return (
+                  <button
+                    key={memberId}
+                    type="button"
+                    onClick={() => toggleMember(memberId)}
+                    className={`rounded-xl px-4 py-2 text-[11px] font-bold transition-all border-2 ${
+                      isAssigned
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-none'
+                        : `${theme.colors.ui.background} ${theme.colors.ui.border} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.borderStrong}`
+                    }`}
+                  >
+                    {getUserName(memberId)}
+                  </button>
+                )
+              })}
+              {projectMembers.length === 0 && (
+                <p className={`text-[11px] italic ${theme.colors.ui.textLight} ml-1`}>
+                  No other members in this project yet.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -80,6 +80,7 @@ function App() {
     title: '',
     description: '',
     dueAt: '',
+    members: [] as string[],
   })
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSidebar, setShowSidebar] = useState(() => {
@@ -360,9 +361,9 @@ function App() {
       description: taskForm.description.trim(),
       dueAt: taskForm.dueAt,
       creatorId: currentUserId,
-      members: [],
-      takenBy: null,
-      status: 'open',
+      members: taskForm.members,
+      takenBy: taskForm.members.length > 0 ? taskForm.members[0] : null,
+      status: taskForm.members.length > 0 ? 'in_progress' : 'open',
       activity: [createActivity('created', `Posted by ${currentUserName || 'teammate'}`)],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -370,7 +371,7 @@ function App() {
     upsertProject((p) => {
       return { ...p, tasks: [...p.tasks, newTask] }
     })
-    setTaskForm({ title: '', description: '', dueAt: '' })
+    setTaskForm({ title: '', description: '', dueAt: '', members: [] })
     setShowTaskModal(false)
   }
 
@@ -388,30 +389,6 @@ function App() {
       status: next,
       doneAt: next === 'done' ? new Date().toISOString() : t.doneAt,
       activity: [...t.activity, createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`)],
-      updatedAt: new Date().toISOString(),
-    }))
-  }
-
-  // "Claim" - first person to claim an unclaimed task
-  const handleTakeTask = (task: Task) => {
-    if (!currentUserId || task.status !== 'open') return
-    handleUpdateTask(task.id, (t) => ({
-      ...t,
-      members: [...t.members, currentUserId],
-      takenBy: currentUserId, // Keep for compatibility, but all members are equal
-      status: 'in_progress',
-      activity: [...t.activity, createActivity('task_taken', `${currentUserName || 'Someone'} claimed this task`)],
-      updatedAt: new Date().toISOString(),
-    }))
-  }
-
-  // "Join" - join a task that others have already claimed
-  const handleJoinTask = (task: Task) => {
-    if (!currentUserId || task.members.includes(currentUserId)) return
-    handleUpdateTask(task.id, (t) => ({
-      ...t,
-      members: [...t.members, currentUserId],
-      activity: [...t.activity, createActivity('member_joined', `${currentUserName || 'Someone'} joined`)],
       updatedAt: new Date().toISOString(),
     }))
   }
@@ -496,7 +473,7 @@ function App() {
 
   const handleNudge = async (task: Task) => {
     if (task.members.length === 0) return alert('No one has claimed this task yet!')
-    
+
     // Check cooldown (3 hours)
     if (!canNudge(task)) {
       const nextNudge = getNextNudgeTime(task)
@@ -532,6 +509,15 @@ function App() {
       setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'error' }))
       setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
     }
+  }
+
+  const handleAssignMembers = (task: Task, memberIds: string[]) => {
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      members: memberIds,
+      status: memberIds.length > 0 ? (t.status === 'open' ? 'in_progress' : t.status) : 'open',
+      updatedAt: new Date().toISOString(),
+    }))
   }
 
   const handleToggleTaskPin = (task: Task) => {
@@ -696,8 +682,6 @@ function App() {
             onCopyLink={(link) => navigator.clipboard?.writeText(link)}
             onShowTaskModal={() => setShowTaskModal(true)}
             onStatusChange={handleStatusChange}
-            onTakeTask={handleTakeTask}
-            onJoinTask={handleJoinTask}
             onLeaveTask={handleLeaveTask}
             onDueChange={handleDueChange}
             onDescriptionChange={handleDescriptionChange}
@@ -706,6 +690,7 @@ function App() {
             onDeleteComment={handleDeleteComment}
             onDeleteTask={handleDeleteTask}
             onNudge={handleNudge}
+            onAssignMembers={handleAssignMembers}
             onUpdateUserName={handleUpdateUserName}
             onTogglePin={handleToggleTaskPin}
             onOpenAI={() => setAiOpen(true)}
@@ -744,6 +729,8 @@ function App() {
           <TaskCreationModal
             taskForm={taskForm}
             setTaskForm={setTaskForm}
+            projectMembers={activeProject?.members || []}
+            getUserName={getUserName}
             onSubmit={handleCreateTask}
             onClose={() => setShowTaskModal(false)}
           />
