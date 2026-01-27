@@ -152,9 +152,9 @@ export function AiChatWidget({
               <div className="flex justify-start">
                 <div className={`${theme.colors.action.secondary.bg} ${theme.colors.ui.textMuted} border ${theme.colors.ui.border} rounded-2xl px-4 py-3 text-sm flex items-center gap-2`}>
                   <div className="flex gap-1">
-                    <div className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className={`w-1 h-1 ${theme.colors.ui.textLight} bg-current rounded-full animate-bounce`} style={{ animationDelay: '0ms' }} />
+                    <div className={`w-1 h-1 ${theme.colors.ui.textLight} bg-current rounded-full animate-bounce`} style={{ animationDelay: '150ms' }} />
+                    <div className={`w-1 h-1 ${theme.colors.ui.textLight} bg-current rounded-full animate-bounce`} style={{ animationDelay: '300ms' }} />
                   </div>
                   Thinking…
                 </div>
@@ -182,7 +182,7 @@ export function AiChatWidget({
               disabled={busy || !input.trim()}
               className={`rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-widest transition-all ${
                 busy || !input.trim()
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                  ? `${theme.colors.action.secondary.bg} ${theme.colors.ui.textLight}`
                   : 'bg-slate-900 dark:bg-amber-600 text-white shadow-lg hover:scale-105 active:scale-95'
               }`}
             >

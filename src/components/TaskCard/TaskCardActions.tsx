@@ -133,7 +133,7 @@ export const TaskCardActions = ({
         </button>
         {showAssignDropdown && (
           <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[60] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-            <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-700 mb-1">
+            <p className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} border-b ${theme.colors.ui.border} mb-1`}>
               Assign Members
             </p>
             <div className="max-h-48 overflow-y-auto no-scrollbar">

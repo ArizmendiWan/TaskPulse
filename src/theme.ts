@@ -11,7 +11,7 @@ export const theme = {
   colors: {
     // Brand colors
     brand: {
-      primary: 'text-slate-800 dark:text-slate-200',
+      primary: 'text-slate-800 dark:text-slate-100',
       primaryBg: 'bg-slate-800 dark:bg-slate-700',
       accent: 'text-amber-500 dark:text-amber-400',
       accentBg: 'bg-amber-500 dark:bg-amber-400',
@@ -22,9 +22,9 @@ export const theme = {
       // Unclaimed/Open tasks
       unassigned: {
         bg: 'bg-slate-50 dark:bg-slate-800/50',
-        text: 'text-slate-500 dark:text-slate-400',
+        text: 'text-slate-500 dark:text-slate-300',
         border: 'border-slate-200 dark:border-slate-700',
-        pill: 'bg-gradient-to-r from-slate-100 to-slate-50 text-slate-600 border border-slate-200 dark:from-slate-800 dark:to-slate-800/50 dark:text-slate-400 dark:border-slate-700',
+        pill: 'bg-gradient-to-r from-slate-100 to-slate-50 text-slate-600 border border-slate-200 dark:from-slate-800 dark:to-slate-800/50 dark:text-slate-300 dark:border-slate-700',
       },
       // Legacy - keeping for compatibility
       not_started: {
@@ -96,7 +96,7 @@ export const theme = {
       },
       nudge: {
         notify: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/30',
-        cooldown: 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50',
+        cooldown: 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-300 cursor-not-allowed opacity-50',
         sending: 'bg-rose-500 text-white',
         sentButton: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
         error: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50',
@@ -127,12 +127,12 @@ export const theme = {
 
     // Task card themed containers
     taskCard: {
-      done: 'border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-900/30',
-      expired: 'border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 opacity-75',
-      overdue: 'border-rose-500 dark:border-rose-500 bg-rose-100 dark:bg-rose-900/70',
-      dueSoon: 'border-rose-200 dark:border-rose-800/40 bg-rose-50 dark:bg-rose-900/20',
-      unclaimed: 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20',
-      default: 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md dark:hover:shadow-black/50',
+      done: 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/40',
+      expired: 'border-slate-300 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-800/60 opacity-80',
+      overdue: 'border-rose-500 dark:border-rose-500 bg-rose-100 dark:bg-rose-900/80',
+      dueSoon: 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/40',
+      unclaimed: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/40',
+      default: 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-500 hover:shadow-md dark:hover:shadow-black/50',
     },
 
     // UI element colors
@@ -143,8 +143,8 @@ export const theme = {
       border: 'border-slate-100 dark:border-slate-800',
       borderStrong: 'border-slate-200 dark:border-slate-700',
       text: 'text-slate-900 dark:text-slate-100',
-      textMuted: 'text-slate-600 dark:text-slate-400',
-      textLight: 'text-slate-400 dark:text-slate-500',
+      textMuted: 'text-slate-600 dark:text-slate-300',
+      textLight: 'text-slate-400 dark:text-slate-400',
       textEmerald: 'text-emerald-600 dark:text-emerald-400',
       textAmber: 'text-amber-600 dark:text-amber-400',
       textRose: 'text-rose-600 dark:text-rose-400',

@@ -122,7 +122,7 @@ export const TaskCard = ({
                 className={`shrink-0 w-5 h-5 mt-0.5 rounded-full flex items-center justify-center transition-all ${
                   task.isPinned
                     ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
-                    : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-500'
+                    : `${theme.colors.ui.textLight} opacity-0 group-hover:opacity-100 hover:text-amber-500`
                 }`}
                 title={task.isPinned ? 'Unpin task' : 'Pin task'}
               >

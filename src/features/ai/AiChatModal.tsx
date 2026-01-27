@@ -125,7 +125,7 @@ export function AiChatModal({
             className={`rounded-2xl px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-black transition-all ${
               canSend 
                 ? 'bg-slate-900 dark:bg-amber-600 text-white hover:scale-105 active:scale-95 shadow-lg' 
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                : `${theme.colors.action.secondary.bg} ${theme.colors.ui.textLight} cursor-not-allowed`
             }`}
             onClick={send}
             disabled={!canSend}
