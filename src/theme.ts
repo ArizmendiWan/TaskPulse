@@ -147,6 +147,7 @@ export const theme = {
       textLight: 'text-slate-400 dark:text-slate-500',
       textEmerald: 'text-emerald-600 dark:text-emerald-400',
       textAmber: 'text-amber-600 dark:text-amber-400',
+      textRose: 'text-rose-600 dark:text-rose-400',
       bgEmeraldSubtle: 'bg-emerald-50/30 dark:bg-emerald-900/10',
       input: 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-900/30 transition-all outline-none',
     },

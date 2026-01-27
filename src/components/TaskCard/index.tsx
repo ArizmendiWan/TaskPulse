@@ -147,17 +147,17 @@ export const TaskCard = ({
               <div className="flex items-center gap-2">
                 <p className={`text-[10px] md:text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
                 {dueSoon && (
-                  <span className="text-[10px] md:text-[11px] font-black text-rose-600 dark:text-rose-400 animate-pulse">
+                  <span className={`text-[10px] md:text-[11px] font-black ${theme.colors.ui.textRose} animate-pulse`}>
                     {getCountdown(task.dueAt, now)}
                   </span>
                 )}
                 {overdue && (
-                  <span className="text-[10px] md:text-[11px] font-black text-rose-600 dark:text-rose-400">
+                  <span className={`text-[10px] md:text-[11px] font-black ${theme.colors.ui.textRose}`}>
                     OVERDUE
                   </span>
                 )}
                 {expired && (
-                  <span className="text-[10px] md:text-[11px] font-black text-slate-500 dark:text-slate-400">
+                  <span className={`text-[10px] md:text-[11px] font-black ${theme.colors.ui.textLight}`}>
                     EXPIRED
                   </span>
                 )}
