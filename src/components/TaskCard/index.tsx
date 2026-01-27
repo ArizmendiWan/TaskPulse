@@ -151,6 +151,16 @@ export const TaskCard = ({
                     {getCountdown(task.dueAt, now)}
                   </span>
                 )}
+                {overdue && (
+                  <span className="text-[10px] md:text-[11px] font-black text-rose-600 dark:text-rose-400">
+                    OVERDUE
+                  </span>
+                )}
+                {expired && (
+                  <span className="text-[10px] md:text-[11px] font-black text-slate-500 dark:text-slate-400">
+                    EXPIRED
+                  </span>
+                )}
               </div>
             </div>
           </div>
