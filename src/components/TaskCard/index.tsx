@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { isOverdue, isExpired, isDueSoon, formatDue, deriveStatus } from '../../lib/taskUtils'
-import { statusLabels, statusPills } from '../../constants'
+import { isOverdue, isExpired, isDueSoon, formatDue, getCountdown } from '../../lib/taskUtils'
 import { theme } from '../../theme'
-import { TaskStatusBadges } from './TaskStatusBadges'
 import { TaskCardActions } from './TaskCardActions'
 import { TaskCommentsSection } from './TaskCommentsSection'
 import { TaskActivitySection } from './TaskActivitySection'
@@ -33,6 +31,12 @@ export const TaskCard = ({
   const [editingDescription, setEditingDescription] = useState(false)
   const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000) // update every minute
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     setDueAtDraft(task.dueAt)
@@ -63,11 +67,10 @@ export const TaskCard = ({
     setEditingDescription(false)
   }
 
-  const derivedStatus = deriveStatus(task)
   const isDone = task.status === 'done'
-  const expired = isExpired(task)
-  const overdue = isOverdue(task) && !isDone
-  const dueSoon = isDueSoon(task) && !expired && !overdue && !isDone
+  const expired = isExpired(task, now)
+  const overdue = isOverdue(task, now) && !isDone
+  const dueSoon = isDueSoon(task, now) && !expired && !overdue && !isDone
 
   // Simplified member model - all members are equal
   const isUnclaimed = task.status === 'open'
@@ -110,13 +113,13 @@ export const TaskCard = ({
             }}
             className="flex-1 min-w-0 cursor-pointer"
           >
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-start gap-2 mb-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   onTogglePin(task)
                 }}
-                className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                className={`shrink-0 w-5 h-5 mt-0.5 rounded-full flex items-center justify-center transition-all ${
                   task.isPinned
                     ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600'
                     : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-amber-500'
@@ -125,46 +128,48 @@ export const TaskCard = ({
               >
                 <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
-              <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words line-clamp-1 group-hover:line-clamp-none transition-all`}>
-                {task.title}
-              </h4>
+              <div className="flex-1 min-w-0">
+                <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words transition-all line-clamp-1 group-hover:line-clamp-none`}>
+                  {task.title}
+                </h4>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 ml-7">
               <p className={`text-[10px] md:text-[11px] font-bold ${theme.colors.ui.textMuted} truncate max-w-[200px]`}>
                 {hasClaimed ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">
+                  <span className={theme.colors.ui.textEmerald}>
                     {memberNames.join(', ')}
                   </span>
                 ) : (
-                  <span className="text-amber-600 dark:text-amber-400 font-black">Unclaimed</span>
+                  <span className={`${theme.colors.ui.textAmber} font-black`}>Unclaimed</span>
                 )}
               </p>
-              <p className={`text-[10px] md:text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-[10px] md:text-[11px] font-medium ${theme.colors.ui.textLight}`}>Due {formatDue(task.dueAt)}</p>
+                {dueSoon && (
+                  <span className="text-[10px] md:text-[11px] font-black text-rose-600 dark:text-rose-400 animate-pulse">
+                    {getCountdown(task.dueAt, now)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right side: All on one line - Status badges + Actions + Expand */}
+          {/* Right side: All on one line - Actions + Expand */}
           <div className="shrink-0 flex items-center justify-end gap-2 ml-7 sm:ml-0">
-            <TaskStatusBadges
-              task={task}
-              onNudge={onNudge}
-              nudgeFeedback={nudgeFeedback}
-              isUnclaimed={isUnclaimed}
-              expired={expired}
-              overdue={overdue}
-              dueSoon={dueSoon}
-            />
-
             <TaskCardActions
               task={task}
               onLeaveTask={onLeaveTask}
               onStatusChange={onStatusChange}
               onAssignMembers={onAssignMembers}
+              onNudge={onNudge}
+              nudgeFeedback={nudgeFeedback}
               projectMembers={projectMembers}
               getUserName={getUserName}
               canLeave={canLeave}
               isMember={isMember}
               expired={expired}
+              now={now}
             />
 
             {/* Expand button */}
@@ -206,16 +211,6 @@ export const TaskCard = ({
                   </span>
                 ) : (
                   <span className={`font-bold italic ${theme.colors.ui.textLight}`}>Unclaimed</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Status:</span>
-                {task.status === 'in_progress' ? (
-                  <span className={`text-[11px] font-bold ${theme.colors.ui.textMuted}`}>In Progress</span>
-                ) : (
-                  <span className={`inline-flex items-center justify-center rounded-full px-2 h-5 text-[9px] font-black uppercase tracking-wider ${statusPills[derivedStatus]}`}>
-                    {statusLabels[derivedStatus]}
-                  </span>
                 )}
               </div>
               <div className="flex items-center gap-1.5">

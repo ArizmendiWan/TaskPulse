@@ -133,7 +133,7 @@ export const TaskCreationModal = ({
                     onClick={() => toggleMember(memberId)}
                     className={`rounded-xl px-4 py-2 text-[11px] font-bold transition-all border-2 ${
                       isAssigned
-                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-none'
+                        ? `${theme.colors.action.success.bg} border-transparent text-white shadow-md ${theme.colors.effects.glow.success}`
                         : `${theme.colors.ui.background} ${theme.colors.ui.border} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.borderStrong}`
                     }`}
                   >

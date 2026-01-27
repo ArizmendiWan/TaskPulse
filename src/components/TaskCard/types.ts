@@ -39,11 +39,14 @@ export interface TaskCardActionsProps {
   onLeaveTask: (task: Task) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
   onAssignMembers: (task: Task, memberIds: string[]) => void
+  onNudge: (task: Task) => void
+  nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   projectMembers: string[]
   getUserName: (userId: string | null) => string
   canLeave: boolean
   isMember: boolean
   expired: boolean
+  now: Date
 }
 
 export interface TaskStatusBadgesProps {
@@ -54,6 +57,7 @@ export interface TaskStatusBadgesProps {
   expired: boolean
   overdue: boolean
   dueSoon: boolean
+  now: Date
 }
 
 export interface TaskCommentsProps {

@@ -95,8 +95,8 @@ export const theme = {
         unchecked: 'border-slate-300 dark:border-slate-600',
       },
       nudge: {
-        // Legacy nudge button styles (not currently used)
-        idle: 'bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 shadow-sm shadow-rose-200 dark:shadow-rose-900/30',
+        notify: 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/30',
+        cooldown: 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-50',
         sending: 'bg-rose-500 text-white',
         sentButton: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
         error: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50',
@@ -145,6 +145,9 @@ export const theme = {
       text: 'text-slate-900 dark:text-slate-100',
       textMuted: 'text-slate-600 dark:text-slate-400',
       textLight: 'text-slate-400 dark:text-slate-500',
+      textEmerald: 'text-emerald-600 dark:text-emerald-400',
+      textAmber: 'text-amber-600 dark:text-amber-400',
+      bgEmeraldSubtle: 'bg-emerald-50/30 dark:bg-emerald-900/10',
       input: 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-900/30 transition-all outline-none',
     },
 

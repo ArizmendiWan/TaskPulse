@@ -95,6 +95,17 @@ export function filterOverdue(tasks: Task[], now = new Date()): Task[] {
   return sortByDue(tasks.filter((t) => isOverdue(t, now)))
 }
 
+export function getCountdown(dueAt: string, now = new Date()): string {
+  const diffMs = new Date(dueAt).getTime() - now.getTime()
+  if (diffMs <= 0) return '0h 0m'
+  
+  const totalMinutes = Math.floor(diffMs / (1000 * 60))
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+  
+  return `${hours}h ${mins}m`
+}
+
 /**
  * Check if task can be nudged (3 hour cooldown)
  */
