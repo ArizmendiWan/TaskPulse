@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { theme } from '../../theme'
-import { canNudge, getNextNudgeTime } from '../../lib/taskUtils'
+import { canNudge, getNextNudgeTime, isOverdue, isDueSoon } from '../../lib/taskUtils'
 import type { TaskCardActionsProps } from './types'
 
 export const TaskCardActions = ({
@@ -57,10 +57,11 @@ export const TaskCardActions = ({
   }
 
   const isOnCooldown = !nudgeAllowed && task.members.length > 0
+  const showNotify = (isOverdue(task, now) || isDueSoon(task, now)) && task.members.length > 0
 
   return (
     <>
-      {task.members.length > 0 && (
+      {showNotify && (
         <button
           type="button"
           title={isOnCooldown ? getCooldownMessage() : 'Send email notification to task members'}
