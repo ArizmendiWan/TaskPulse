@@ -92,7 +92,7 @@ export function filterAtRisk(tasks: Task[], now = new Date()): Task[] {
 }
 
 export function filterOverdue(tasks: Task[], now = new Date()): Task[] {
-  return sortByDue(tasks.filter((t) => isOverdue(t, now)))
+  return sortByDue(tasks.filter((t) => isOverdue(t, now) || isExpired(t, now)))
 }
 
 export function getCountdown(dueAt: string, now = new Date()): string {

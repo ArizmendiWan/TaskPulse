@@ -108,15 +108,15 @@ export const TaskCreationModal = ({
               >
                 Due Date <span className="text-rose-500">*</span>
               </label>
-            <input
-              id="task-due"
-              required
-              type="datetime-local"
-              name="task-due"
-              value={taskForm.dueAt}
-              onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
-              className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
-            />
+              <input
+                id="task-due"
+                required
+                type="datetime-local"
+                name="task-due"
+                value={taskForm.dueAt}
+                onChange={(e) => setTaskForm((t) => ({ ...t, dueAt: e.target.value }))}
+                className={`w-full rounded-[1.5rem] border-2 ${theme.colors.ui.input} px-6 py-4 text-[13px] font-black focus:outline-none transition-all`}
+              />
           </div>
 
           <div className="space-y-3">
@@ -127,18 +127,18 @@ export const TaskCreationModal = ({
               {projectMembers.map((memberId) => {
                 const isAssigned = taskForm.members.includes(memberId)
                 return (
-                  <button
-                    key={memberId}
-                    type="button"
+                <button
+                  key={memberId}
+                  type="button"
                     onClick={() => toggleMember(memberId)}
                     className={`rounded-xl px-4 py-2 text-[11px] font-bold transition-all border-2 ${
                       isAssigned
                         ? `${theme.colors.action.success.bg} border-transparent text-white shadow-md ${theme.colors.effects.glow.success}`
                         : `${theme.colors.ui.background} ${theme.colors.ui.border} ${theme.colors.ui.textMuted} hover:${theme.colors.ui.borderStrong}`
-                    }`}
-                  >
-                    {getUserName(memberId)}
-                  </button>
+                  }`}
+                >
+                  {getUserName(memberId)}
+                </button>
                 )
               })}
               {projectMembers.length === 0 && (

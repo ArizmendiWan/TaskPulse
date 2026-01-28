@@ -345,8 +345,8 @@ function App() {
       })
 
       return {
-        ...p,
-        members: p.members.filter((m) => m !== memberId),
+      ...p,
+      members: p.members.filter((m) => m !== memberId),
         tasks: cleanedTasks,
       }
     })
@@ -402,12 +402,12 @@ function App() {
       const newStatus = newMembers.length === 0 ? 'open' : t.status
       const newTakenBy = newMembers.length === 0 ? null : (t.takenBy === currentUserId ? newMembers[0] : t.takenBy)
       return {
-        ...t,
+      ...t,
         members: newMembers,
         takenBy: newTakenBy,
         status: newStatus,
         activity: [...t.activity, createActivity('member_left', `${currentUserName || 'Someone'} left`)],
-        updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       }
     })
   }
@@ -634,14 +634,14 @@ function App() {
                   updatedAt: new Date().toISOString(),
                 }
                 await saveUser(newUser)
-              setUserCache((prev) => ({ ...prev, [userId]: newUser }))
+                setUserCache((prev) => ({ ...prev, [userId]: newUser }))
+              }
+              
+              login(userId, name)
+            } catch (err) {
+              setLoginError('Failed to join project.')
             }
-            
-            login(userId, name)
-          } catch (err) {
-            setLoginError('Failed to join project.')
-          }
-        }}
+          }}
           onConfirmJoin={async () => {
             if (currentUserId && activeProject) {
               await upsertProjectAsyncById(activeProject.id, (p) => ({
@@ -725,38 +725,38 @@ function App() {
       )}
 
       <Suspense fallback={null}>
-        {showTaskModal && (
-          <TaskCreationModal
-            taskForm={taskForm}
-            setTaskForm={setTaskForm}
+      {showTaskModal && (
+        <TaskCreationModal
+          taskForm={taskForm}
+          setTaskForm={setTaskForm}
             projectMembers={activeProject?.members || []}
-            getUserName={getUserName}
-            onSubmit={handleCreateTask}
-            onClose={() => setShowTaskModal(false)}
-          />
-        )}
-      </Suspense>
-
-      <Suspense fallback={null}>
-        {deleteTarget && (
-          <DeleteConfirmationModal
-            deleteTarget={deleteTarget}
-            deleteConfirmCode={deleteConfirmCode}
-            deleteConfirmInput={deleteConfirmInput}
-            setDeleteConfirmInput={setDeleteConfirmInput}
-            onClose={() => setDeleteTarget(null)}
-            onConfirm={handleExecuteDelete}
-          />
-        )}
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <AiChatModal
-          open={aiOpen}
-          onClose={() => setAiOpen(false)}
-          projectName={activeProject?.name}
-          contextHint={aiContextHint}
+          getUserName={getUserName}
+          onSubmit={handleCreateTask}
+          onClose={() => setShowTaskModal(false)}
         />
+      )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+      {deleteTarget && (
+        <DeleteConfirmationModal
+          deleteTarget={deleteTarget}
+          deleteConfirmCode={deleteConfirmCode}
+          deleteConfirmInput={deleteConfirmInput}
+          setDeleteConfirmInput={setDeleteConfirmInput}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleExecuteDelete}
+        />
+      )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+      <AiChatModal
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        projectName={activeProject?.name}
+          contextHint={aiContextHint}
+      />
       </Suspense>
     </>
   )

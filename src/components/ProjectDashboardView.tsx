@@ -571,7 +571,7 @@ export const ProjectDashboardView = ({
         <AiChatWidget
           projectName={activeProject.name}
             contextHint={aiContextHint}
-          />
+        />
         </Suspense>
       </main>
     </div>
