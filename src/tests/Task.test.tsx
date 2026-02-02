@@ -35,7 +35,7 @@ describe('Task Management', () => {
     render(<App />)
     await setupProject()
 
-    fireEvent.click(await screen.findByRole('button', { name: /POST TASK/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /ADD TASK/i }))
     fireEvent.change(await screen.findByPlaceholderText(/e\.g\. Write report introduction/i), {
       target: { value: 'Test Task' },
     })
@@ -46,54 +46,65 @@ describe('Task Management', () => {
     fireEvent.change(screen.getByLabelText(/Due date/i), { target: { value: dueString } })
 
     const modal = await screen.findByRole('dialog', { name: /New task/i })
-    fireEvent.click(within(modal).getByRole('button', { name: /POST TASK/i }))
+    fireEvent.click(within(modal).getByRole('button', { name: /CREATE TASK/i }))
 
     expect(await screen.findByText('Test Task')).toBeInTheDocument()
   }, 10000)
 
-  it('filters tasks by DUE SOON status', async () => {
+  it('filters tasks by AT RISK status', async () => {
     render(<App />)
     await setupProject()
 
-    // Add a task due soon (within 48h)
-    fireEvent.click(await screen.findByRole('button', { name: /POST TASK/i }))
+    // Add an At Risk task (due in 24h, not started)
+    fireEvent.click(await screen.findByRole('button', { name: /ADD TASK/i }))
     fireEvent.change(await screen.findByPlaceholderText(/e\.g\. Write report introduction/i), {
-      target: { value: 'Due Soon Task' },
+      target: { value: 'At Risk Task' },
     })
     const tomorrow = new Date()
     tomorrow.setHours(tomorrow.getHours() + 24)
     fireEvent.change(screen.getByLabelText(/Due date/i), { target: { value: tomorrow.toISOString().slice(0, 16) } })
     const modal = await screen.findByRole('dialog', { name: /New task/i })
-    fireEvent.click(within(modal).getByRole('button', { name: /POST TASK/i }))
+    fireEvent.click(within(modal).getByRole('button', { name: /CREATE TASK/i }))
 
-    // Click the Due Soon filter
+    // Need to make sure the filter container exists before clicking
     const filterContainer = await screen.findByRole('group', { name: /task filters/i })
-    fireEvent.click(within(filterContainer).getByRole('button', { name: /DUE SOON/i }))
+    fireEvent.click(within(filterContainer).getByRole('button', { name: /AT RISK/i }))
 
-    expect(await screen.findByText('Due Soon Task')).toBeInTheDocument()
+    expect(await screen.findByText('At Risk Task')).toBeInTheDocument()
   }, 10000)
 
-  it('claiming a task changes its status to in progress', async () => {
+  it('moves task out of AT RISK when started', async () => {
     render(<App />)
     await setupProject()
 
-    // Add a task
-    fireEvent.click(await screen.findByRole('button', { name: /POST TASK/i }))
-    fireEvent.change(await screen.findByPlaceholderText(/e\.g\. Write report introduction/i), { target: { value: 'Claim Me' } })
+    // Add At Risk task
+    fireEvent.click(await screen.findByRole('button', { name: /ADD TASK/i }))
+    fireEvent.change(await screen.findByPlaceholderText(/e\.g\. Write report introduction/i), { target: { value: 'Move Me' } })
     const tomorrow = new Date()
     tomorrow.setHours(tomorrow.getHours() + 24)
     fireEvent.change(screen.getByLabelText(/Due date/i), { target: { value: tomorrow.toISOString().slice(0, 16) } })
     const modal = await screen.findByRole('dialog', { name: /New task/i })
-    fireEvent.click(within(modal).getByRole('button', { name: /POST TASK/i }))
+    fireEvent.click(within(modal).getByRole('button', { name: /CREATE TASK/i }))
 
-    // Find the task and click the Claim button
-    const taskTitle = await screen.findByText('Claim Me')
+    // Expand and change status
+    const taskTitle = await screen.findByText('Move Me')
     const taskCard = taskTitle.closest('.group') as HTMLElement
-    const claimButton = await within(taskCard).findByRole('button', { name: /^Claim$/i })
-    fireEvent.click(claimButton)
+    fireEvent.click(within(taskCard).getByRole('button', { name: /Move Me/i }))
 
-    // After claiming, should show IN PROGRESS status and Leave button
-    expect(await within(taskCard).findByText(/IN PROGRESS/i)).toBeInTheDocument()
-    expect(await within(taskCard).findByRole('button', { name: /Leave/i })).toBeInTheDocument()
+    // Enter Edit mode
+    const editButton = await within(taskCard).findByRole('button', { name: /Edit Task/i })
+    fireEvent.click(editButton)
+
+    const statusSelect = await within(taskCard).findByRole('combobox', { name: /status/i })
+    fireEvent.change(statusSelect, { target: { value: 'in_progress' } })
+
+    // Finish Edit mode
+    const doneButton = await within(taskCard).findByRole('button', { name: /Done Editing/i })
+    fireEvent.click(doneButton)
+
+    // Check filter
+    const filterContainer = await screen.findByRole('group', { name: /task filters/i })
+    fireEvent.click(within(filterContainer).getByRole('button', { name: /AT RISK/i }))
+    expect(await screen.findByText(/No tasks found/i)).toBeInTheDocument()
   }, 10000)
 })

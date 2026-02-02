@@ -35,6 +35,7 @@ interface ProjectDashboardViewProps {
   onCopyLink: (link: string) => void
   onShowTaskModal: () => void
   onStatusChange: (task: Task, next: TaskStatus) => void
+  onTitleChange: (task: Task, next: string) => void
   onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
@@ -75,6 +76,7 @@ export const ProjectDashboardView = ({
   onCopyLink,
   onShowTaskModal,
   onStatusChange,
+  onTitleChange,
   onLeaveTask,
   onDueChange,
   onDescriptionChange,
@@ -544,6 +546,7 @@ export const ProjectDashboardView = ({
                           setExpandedTasks((prev) => ({ ...prev, [id]: !prev[id] }))
                         }
                         onStatusChange={onStatusChange}
+                        onTitleChange={onTitleChange}
                         onLeaveTask={onLeaveTask}
                         onDueChange={onDueChange}
                         onDescriptionChange={onDescriptionChange}

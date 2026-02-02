@@ -5,6 +5,7 @@ export interface TaskCardProps {
   expanded: boolean
   onToggleExpand: (taskId: string) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
+  onTitleChange: (task: Task, next: string) => void
   onLeaveTask: (task: Task) => void
   onDueChange: (task: Task, next: string) => void
   onDescriptionChange: (task: Task, next: string) => void
