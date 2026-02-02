@@ -121,6 +121,7 @@ export const theme = {
         claim: 'bg-amber-500 text-white hover:bg-amber-600 shadow-md shadow-amber-200/50 dark:shadow-amber-900/30',
         join: 'bg-amber-500 text-white hover:bg-amber-600 shadow-md shadow-amber-200/50 dark:shadow-amber-900/30',
         finish: 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-200/50 dark:shadow-emerald-900/30',
+        reset: 'bg-slate-700 text-white hover:bg-slate-600 shadow-md shadow-slate-200/50 dark:shadow-slate-700/30',
         leave: 'border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:border-rose-300 hover:text-rose-600 dark:hover:border-rose-700 dark:hover:text-rose-400',
       },
     },

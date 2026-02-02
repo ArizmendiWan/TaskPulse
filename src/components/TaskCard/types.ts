@@ -45,6 +45,7 @@ export interface TaskCardActionsProps {
   getUserName: (userId: string | null) => string
   canLeave: boolean
   isMember: boolean
+  isProjectMember: boolean
   expired: boolean
   now: Date
 }

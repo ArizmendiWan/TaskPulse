@@ -75,6 +75,7 @@ export const TaskCard = ({
   // Simplified member model - all members are equal
   const isUnclaimed = task.status === 'open'
   const isMember = currentUserId ? task.members.includes(currentUserId) : false
+  const isProjectMember = currentUserId ? projectMembers.includes(currentUserId) : false
   const hasClaimed = task.members.length > 0
   const canLeave = isMember && task.status !== 'done'
 
@@ -178,6 +179,7 @@ export const TaskCard = ({
               getUserName={getUserName}
               canLeave={canLeave}
               isMember={isMember}
+              isProjectMember={isProjectMember}
               expired={expired}
               now={now}
             />

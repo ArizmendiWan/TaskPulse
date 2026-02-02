@@ -384,13 +384,32 @@ function App() {
 
   const handleStatusChange = (task: Task, next: TaskStatus) => {
     if (task.status === next) return
-    handleUpdateTask(task.id, (t) => ({
-      ...t,
-      status: next,
-      doneAt: next === 'done' ? new Date().toISOString() : t.doneAt,
-      activity: [...t.activity, createActivity('status_changed', `Status: ${statusLabels[t.status]} → ${statusLabels[next]}`)],
-      updatedAt: new Date().toISOString(),
-    }))
+
+    // When moving away from 'done', ensure we land in the right state based on membership
+    let resolvedStatus = next
+    if (task.status === 'done' && next !== 'done') {
+      resolvedStatus = task.members.length > 0 ? 'in_progress' : 'open'
+    }
+
+    handleUpdateTask(task.id, (t) => {
+      const updated: Task = {
+        ...t,
+        status: resolvedStatus,
+        activity: [...(t.activity || []), createActivity('status_changed', `Status: ${statusLabels[t.status] || t.status} → ${statusLabels[resolvedStatus] || resolvedStatus}`)],
+        updatedAt: new Date().toISOString(),
+      }
+      
+      if (resolvedStatus === 'done') {
+        updated.doneAt = new Date().toISOString()
+      } else {
+        // Remove doneAt if present when resetting status
+        if ('doneAt' in updated) {
+          delete updated.doneAt
+        }
+      }
+      
+      return updated
+    })
   }
 
   // "Leave" - leave a task you're part of

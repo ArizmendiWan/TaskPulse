@@ -14,6 +14,7 @@ export const TaskCardActions = ({
   getUserName,
   canLeave,
   isMember,
+  isProjectMember,
   expired,
   now,
 }: TaskCardActionsProps) => {
@@ -30,7 +31,22 @@ export const TaskCardActions = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  if (task.status === 'done' || expired) return null
+  if (expired) return null
+
+  if (task.status === 'done') {
+    return isProjectMember ? (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onStatusChange(task, 'in_progress')
+        }}
+        className={`rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${theme.colors.action.task.reset}`}
+      >
+        Reset
+      </button>
+    ) : null
+  }
 
   const toggleMember = (memberId: string) => {
     const currentMembers = task.members
