@@ -11,6 +11,7 @@ export const TaskCard = ({
   expanded,
   onToggleExpand,
   onStatusChange,
+  onTitleChange,
   onLeaveTask,
   onDueChange,
   onDescriptionChange,
@@ -29,8 +30,10 @@ export const TaskCard = ({
   // Inline editing states
   const [editingDue, setEditingDue] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
   const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
+  const [titleDraft, setTitleDraft] = useState(task.title)
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -41,7 +44,23 @@ export const TaskCard = ({
   useEffect(() => {
     setDueAtDraft(task.dueAt)
     setDescriptionDraft(task.description)
+    setTitleDraft(task.title)
   }, [task])
+
+  const handleSaveTitle = () => {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== task.title) {
+      onTitleChange(task, trimmed)
+    } else {
+      setTitleDraft(task.title)
+    }
+    setEditingTitle(false)
+  }
+
+  const handleCancelTitle = () => {
+    setTitleDraft(task.title)
+    setEditingTitle(false)
+  }
 
   const handleSaveDue = () => {
     if (dueAtDraft !== task.dueAt) {
@@ -130,9 +149,53 @@ export const TaskCard = ({
                 <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
               <div className="flex-1 min-w-0">
-                <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words transition-all line-clamp-1 group-hover:line-clamp-none`}>
-                  {task.title}
-                </h4>
+                {editingTitle ? (
+                  <input
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      e.stopPropagation()
+                      if (e.key === 'Enter') handleSaveTitle()
+                      if (e.key === 'Escape') handleCancelTitle()
+                    }}
+                    onBlur={handleSaveTitle}
+                    autoFocus
+                    className={`w-full rounded-md border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-sm md:text-base font-bold ${theme.colors.ui.text} focus:outline-none focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 transition-all`}
+                    aria-label="Edit task title"
+                  />
+                ) : (
+                  <div className="flex items-start gap-2">
+                    <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words transition-all line-clamp-1 group-hover:line-clamp-none`}>
+                      {task.title}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingTitle(true)
+                      }}
+                      className={`mt-0.5 p-0.5 rounded hover:${theme.colors.ui.surface} transition-all ${theme.colors.ui.textLight}`}
+                      title="Edit title"
+                      aria-label="Edit task title"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 ml-7">

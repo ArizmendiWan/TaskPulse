@@ -412,6 +412,17 @@ function App() {
     })
   }
 
+  const handleTitleChange = (task: Task, next: string) => {
+    const trimmed = next.trim()
+    if (!trimmed || trimmed === task.title) return
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      title: trimmed,
+      activity: [...(t.activity || []), createActivity('title_changed', `Title updated to "${trimmed}"`)],
+      updatedAt: new Date().toISOString(),
+    }))
+  }
+
   // "Leave" - leave a task you're part of
   const handleLeaveTask = (task: Task) => {
     if (!currentUserId) return
@@ -701,6 +712,7 @@ function App() {
             onCopyLink={(link) => navigator.clipboard?.writeText(link)}
             onShowTaskModal={() => setShowTaskModal(true)}
             onStatusChange={handleStatusChange}
+          onTitleChange={handleTitleChange}
             onLeaveTask={handleLeaveTask}
             onDueChange={handleDueChange}
             onDescriptionChange={handleDescriptionChange}

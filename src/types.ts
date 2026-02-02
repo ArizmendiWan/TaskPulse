@@ -7,6 +7,7 @@ export type ActivityType =
   | 'member_left'
   | 'task_taken'
   | 'due_changed'
+  | 'title_changed'
   | 'description_changed'
 
 export interface ActivityItem {
