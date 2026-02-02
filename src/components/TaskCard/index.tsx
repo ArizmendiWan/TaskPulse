@@ -35,6 +35,7 @@ export const TaskCard = ({
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [now, setNow] = useState(new Date())
+  const [isTaskEditMode, setIsTaskEditMode] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000) // update every minute
@@ -84,6 +85,31 @@ export const TaskCard = ({
   const handleCancelDescription = () => {
     setDescriptionDraft(task.description)
     setEditingDescription(false)
+  }
+
+  const enterTaskEditMode = () => {
+    if (isTaskEditMode) return
+    if (!expanded) {
+      onToggleExpand(task.id)
+    }
+    setIsTaskEditMode(true)
+    setEditingTitle(true)
+    setEditingDue(true)
+    setEditingDescription(true)
+  }
+
+  const saveTaskEdits = () => {
+    handleSaveTitle()
+    handleSaveDue()
+    handleSaveDescription()
+    setIsTaskEditMode(false)
+  }
+
+  const discardTaskEdits = () => {
+    handleCancelTitle()
+    handleCancelDue()
+    handleCancelDescription()
+    setIsTaskEditMode(false)
   }
 
   const isDone = task.status === 'done'
@@ -149,51 +175,33 @@ export const TaskCard = ({
                 <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
               <div className="flex-1 min-w-0">
-                {editingTitle ? (
+                {(editingTitle || isTaskEditMode) ? (
                   <input
                     value={titleDraft}
                     onChange={(e) => setTitleDraft(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
                       e.stopPropagation()
-                      if (e.key === 'Enter') handleSaveTitle()
+                      if (e.key === 'Enter') {
+                        if (!isTaskEditMode) {
+                          handleSaveTitle()
+                        }
+                        e.preventDefault()
+                      }
                       if (e.key === 'Escape') handleCancelTitle()
                     }}
-                    onBlur={handleSaveTitle}
+                    onBlur={() => {
+                      if (!isTaskEditMode) {
+                        handleSaveTitle()
+                      }
+                    }}
                     autoFocus
                     className={`w-full rounded-md border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-sm md:text-base font-bold ${theme.colors.ui.text} focus:outline-none focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 transition-all`}
                     aria-label="Edit task title"
                   />
                 ) : (
-                  <div className="flex items-start gap-2">
-                    <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words transition-all line-clamp-1 group-hover:line-clamp-none`}>
-                      {task.title}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setEditingTitle(true)
-                      }}
-                      className={`mt-0.5 p-0.5 rounded hover:${theme.colors.ui.surface} transition-all ${theme.colors.ui.textLight}`}
-                      title="Edit title"
-                      aria-label="Edit task title"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                      </svg>
-                    </button>
+                  <div>
+                    <h4 className={`text-sm md:text-base font-bold ${theme.colors.ui.text} break-words transition-all line-clamp-1 group-hover:line-clamp-none`}>{task.title}</h4>
                   </div>
                 )}
               </div>
@@ -290,15 +298,19 @@ export const TaskCard = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Due:</span>
-                {editingDue ? (
+                {(editingDue || isTaskEditMode) ? (
                   <div className="flex items-center gap-1">
                     <input
                       type="datetime-local"
                       value={dueAtDraft}
                       onChange={(e) => setDueAtDraft(e.target.value)}
-                      onBlur={handleSaveDue}
+                      onBlur={() => {
+                        if (!isTaskEditMode) {
+                          handleSaveDue()
+                        }
+                      }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveDue()
+                        if (e.key === 'Enter' && !isTaskEditMode) handleSaveDue()
                         if (e.key === 'Escape') handleCancelDue()
                       }}
                       autoFocus
@@ -308,31 +320,60 @@ export const TaskCard = ({
                 ) : (
                   <div className="flex items-center gap-1.5 group/due">
                     <span className={`font-bold ${theme.colors.ui.text}`}>{formatDue(task.dueAt)}</span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingDue(true)}
-                      className="opacity-0 group-hover/due:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                      title="Edit due date"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
-                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
-                      </svg>
-                    </button>
+                    {!isTaskEditMode && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingDue(true)}
+                        className="opacity-0 group-hover/due:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                        title="Edit due date"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Right: Delete button */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onDeleteTask(task)}
-                className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                Delete
-              </button>
+            <div className="flex flex-wrap gap-2">
+              {isTaskEditMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={saveTaskEdits}
+                    className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 transition-all"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={discardTaskEdits}
+                    className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900/30 transition-all"
+                  >
+                    Discard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={enterTaskEditMode}
+                    className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/30 transition-all"
+                  >
+                    Edit task
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTask(task)}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
