@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { isOverdue, isExpired, isDueSoon, formatDue, getCountdown } from '../../lib/taskUtils'
+import { isOverdue, isDueSoon, formatDue, getCountdown } from '../../lib/taskUtils'
 import { theme } from '../../theme'
 import { TaskCardActions } from './TaskCardActions'
 import { TaskCommentsSection } from './TaskCommentsSection'
@@ -89,9 +89,8 @@ export const TaskCard = ({
   }
 
   const isDone = task.status === 'done'
-  const expired = isExpired(task, now)
-  const overdue = isOverdue(task, now) && !isDone
-  const dueSoon = isDueSoon(task, now) && !expired && !overdue && !isDone
+  const overdue = isOverdue(task, now)
+  const dueSoon = isDueSoon(task, now) && !overdue && !isDone
 
   // Simplified member model - all members are equal
   const isUnclaimed = task.status === 'open'
@@ -108,15 +107,13 @@ export const TaskCard = ({
       className={`group relative rounded-2xl border transition-all duration-300 ${
         isDone
           ? theme.colors.taskCard.done
-          : expired
-            ? theme.colors.taskCard.expired
-            : overdue
-              ? theme.colors.taskCard.overdue
-              : dueSoon
-                ? theme.colors.taskCard.dueSoon
-                : isUnclaimed
-                  ? theme.colors.taskCard.unclaimed
-                  : theme.colors.taskCard.default
+          : overdue
+            ? theme.colors.taskCard.overdue
+            : dueSoon
+              ? theme.colors.taskCard.dueSoon
+              : isUnclaimed
+                ? theme.colors.taskCard.unclaimed
+                : theme.colors.taskCard.default
       }`}
     >
       {/* Collapsed Header */}
@@ -197,11 +194,6 @@ export const TaskCard = ({
                     OVERDUE
                   </span>
                 )}
-                {expired && (
-                  <span className={`text-[10px] md:text-[11px] font-black ${theme.colors.ui.textLight}`}>
-                    EXPIRED
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -220,7 +212,6 @@ export const TaskCard = ({
               canLeave={canLeave}
               isMember={isMember}
               isProjectMember={isProjectMember}
-              expired={expired}
               now={now}
             />
 

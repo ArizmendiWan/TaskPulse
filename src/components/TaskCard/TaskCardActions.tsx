@@ -15,7 +15,6 @@ export const TaskCardActions = ({
   canLeave,
   isMember,
   isProjectMember,
-  expired,
   now,
 }: TaskCardActionsProps) => {
   const [showAssignDropdown, setShowAssignDropdown] = useState(false)
@@ -30,8 +29,6 @@ export const TaskCardActions = ({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  if (expired) return null
 
   if (task.status === 'done') {
     return isProjectMember ? (

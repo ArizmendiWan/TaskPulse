@@ -8,7 +8,6 @@ export const statusLabels: Record<string, string> = {
   open: 'Unclaimed',
   in_progress: 'In Progress',
   done: 'Done',
-  expired: 'Expired',
   overdue: 'Overdue',
 }
 
@@ -16,7 +15,6 @@ export const statusPills: Record<string, string> = {
   open: theme.colors.status.unassigned.pill, // reuse unassigned style for open
   in_progress: theme.colors.status.in_progress.pill,
   done: theme.colors.status.done.pill,
-  expired: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
   overdue: theme.colors.status.overdue.pill,
 }
 

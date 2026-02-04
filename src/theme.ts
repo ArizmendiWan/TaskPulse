@@ -54,12 +54,6 @@ export const theme = {
         border: 'border-rose-200 dark:border-rose-800/50',
         pill: 'bg-gradient-to-r from-rose-100 to-rose-50 text-rose-700 border border-rose-200 dark:from-rose-900/30 dark:to-rose-900/20 dark:text-rose-400 dark:border-rose-800/50',
       },
-      // Expired - unclaimed and past due
-      expired: {
-        bg: 'bg-slate-100 dark:bg-slate-800',
-        text: 'text-slate-500 dark:text-slate-500',
-        pill: 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
-      },
       // Due soon - approaching deadline
       soon: {
         bg: 'bg-amber-500 dark:bg-amber-500',
@@ -129,7 +123,6 @@ export const theme = {
     // Task card themed containers
     taskCard: {
       done: 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/40',
-      expired: 'border-slate-300 dark:border-slate-600 bg-slate-100/80 dark:bg-slate-800/60 opacity-80',
       overdue: 'border-rose-500 dark:border-rose-500 bg-rose-100 dark:bg-rose-900/80',
       dueSoon: 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/40',
       unclaimed: 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/40',

@@ -5,7 +5,6 @@ import {
   filterMyTasks,
   filterOpen,
   isDueSoon,
-  isExpired,
   isOverdue,
   sortByDue,
 } from '../lib/taskUtils'
@@ -33,10 +32,10 @@ beforeEach(() => {
 })
 
 describe('task utils', () => {
-  it('detects expired tasks (open and past due)', () => {
+  it('treats past due unclaimed tasks as overdue', () => {
     const task: Task = { ...baseTask, dueAt: '2024-12-30T00:00:00Z', status: 'open' }
-    expect(isExpired(task)).toBe(true)
-    expect(deriveStatus(task)).toBe('expired')
+    expect(isOverdue(task)).toBe(true)
+    expect(deriveStatus(task)).toBe('overdue')
   })
 
   it('detects overdue tasks (in_progress and past due)', () => {

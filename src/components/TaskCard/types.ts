@@ -28,7 +28,6 @@ export interface TaskCardHeaderProps {
   onTogglePin: (task: Task) => void
   getUserName: (userId: string | null) => string
   expanded: boolean
-  expired: boolean
   overdue: boolean
   dueSoon: boolean
   hasClaimed: boolean
@@ -47,7 +46,6 @@ export interface TaskCardActionsProps {
   canLeave: boolean
   isMember: boolean
   isProjectMember: boolean
-  expired: boolean
   now: Date
 }
 
@@ -56,7 +54,6 @@ export interface TaskStatusBadgesProps {
   onNudge: (task: Task) => void
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   isUnclaimed: boolean
-  expired: boolean
   overdue: boolean
   dueSoon: boolean
   now: Date

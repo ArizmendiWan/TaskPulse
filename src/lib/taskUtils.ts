@@ -2,31 +2,24 @@ import type { Task, TaskStatus } from '../types'
 
 const HOUR_MS = 1000 * 60 * 60
 
-export type DerivedStatus = TaskStatus | 'overdue' | 'expired'
+export type DerivedStatus = TaskStatus | 'overdue'
 
 /**
- * A task is "expired" if it's still open (never taken) and past due date.
- */
-export function isExpired(task: Task, now = new Date()): boolean {
-  return task.status === 'open' && new Date(task.dueAt).getTime() < now.getTime()
-}
-
-/**
- * A task is "overdue" if it was taken (in_progress) but not completed by due date.
+ * A task is "overdue" if it's not completed and past due date.
+ * This includes both claimed and unclaimed tasks.
  */
 export function isOverdue(task: Task, now = new Date()): boolean {
-  return task.status === 'in_progress' && new Date(task.dueAt).getTime() < now.getTime()
-}
-
-/**
- * Check if task is past due (either expired or overdue).
- */
-export function isPastDue(task: Task, now = new Date()): boolean {
   return task.status !== 'done' && new Date(task.dueAt).getTime() < now.getTime()
 }
 
+/**
+ * Check if task is past due.
+ */
+export function isPastDue(task: Task, now = new Date()): boolean {
+  return isOverdue(task, now)
+}
+
 export function deriveStatus(task: Task, now = new Date()): DerivedStatus {
-  if (isExpired(task, now)) return 'expired'
   if (isOverdue(task, now)) return 'overdue'
   return task.status
 }
@@ -92,7 +85,7 @@ export function filterAtRisk(tasks: Task[], now = new Date()): Task[] {
 }
 
 export function filterOverdue(tasks: Task[], now = new Date()): Task[] {
-  return sortByDue(tasks.filter((t) => isOverdue(t, now) || isExpired(t, now)))
+  return sortByDue(tasks.filter((t) => isOverdue(t, now)))
 }
 
 export function getCountdown(dueAt: string, now = new Date()): string {
