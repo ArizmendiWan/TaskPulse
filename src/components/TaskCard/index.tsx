@@ -28,9 +28,6 @@ export const TaskCard = ({
   currentUserId,
 }: TaskCardProps) => {
   // Inline editing states
-  const [editingDue, setEditingDue] = useState(false)
-  const [editingDescription, setEditingDescription] = useState(false)
-  const [editingTitle, setEditingTitle] = useState(false)
   const [dueAtDraft, setDueAtDraft] = useState(task.dueAt)
   const [descriptionDraft, setDescriptionDraft] = useState(task.description)
   const [titleDraft, setTitleDraft] = useState(task.title)
@@ -55,36 +52,18 @@ export const TaskCard = ({
     } else {
       setTitleDraft(task.title)
     }
-    setEditingTitle(false)
-  }
-
-  const handleCancelTitle = () => {
-    setTitleDraft(task.title)
-    setEditingTitle(false)
   }
 
   const handleSaveDue = () => {
     if (dueAtDraft !== task.dueAt) {
       onDueChange(task, dueAtDraft)
     }
-    setEditingDue(false)
   }
 
   const handleSaveDescription = () => {
     if (descriptionDraft !== task.description) {
       onDescriptionChange(task, descriptionDraft)
     }
-    setEditingDescription(false)
-  }
-
-  const handleCancelDue = () => {
-    setDueAtDraft(task.dueAt)
-    setEditingDue(false)
-  }
-
-  const handleCancelDescription = () => {
-    setDescriptionDraft(task.description)
-    setEditingDescription(false)
   }
 
   const enterTaskEditMode = () => {
@@ -93,9 +72,6 @@ export const TaskCard = ({
       onToggleExpand(task.id)
     }
     setIsTaskEditMode(true)
-    setEditingTitle(true)
-    setEditingDue(true)
-    setEditingDescription(true)
   }
 
   const saveTaskEdits = () => {
@@ -106,9 +82,9 @@ export const TaskCard = ({
   }
 
   const discardTaskEdits = () => {
-    handleCancelTitle()
-    handleCancelDue()
-    handleCancelDescription()
+    setTitleDraft(task.title)
+    setDueAtDraft(task.dueAt)
+    setDescriptionDraft(task.description)
     setIsTaskEditMode(false)
   }
 
@@ -175,7 +151,7 @@ export const TaskCard = ({
                 <span className={`text-[10px] ${task.isPinned ? '' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>📌</span>
               </button>
               <div className="flex-1 min-w-0">
-                {(editingTitle || isTaskEditMode) ? (
+                {isTaskEditMode ? (
                   <input
                     value={titleDraft}
                     onChange={(e) => setTitleDraft(e.target.value)}
@@ -183,17 +159,10 @@ export const TaskCard = ({
                     onKeyDown={(e) => {
                       e.stopPropagation()
                       if (e.key === 'Enter') {
-                        if (!isTaskEditMode) {
-                          handleSaveTitle()
-                        }
+                        saveTaskEdits()
                         e.preventDefault()
                       }
-                      if (e.key === 'Escape') handleCancelTitle()
-                    }}
-                    onBlur={() => {
-                      if (!isTaskEditMode) {
-                        handleSaveTitle()
-                      }
+                      if (e.key === 'Escape') discardTaskEdits()
                     }}
                     autoFocus
                     className={`w-full rounded-md border-2 ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-sm md:text-base font-bold ${theme.colors.ui.text} focus:outline-none focus:border-amber-400 focus:bg-white dark:focus:bg-slate-800 transition-all`}
@@ -298,20 +267,15 @@ export const TaskCard = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className={`font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Due:</span>
-                {(editingDue || isTaskEditMode) ? (
+                {isTaskEditMode ? (
                   <div className="flex items-center gap-1">
                     <input
                       type="datetime-local"
                       value={dueAtDraft}
                       onChange={(e) => setDueAtDraft(e.target.value)}
-                      onBlur={() => {
-                        if (!isTaskEditMode) {
-                          handleSaveDue()
-                        }
-                      }}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !isTaskEditMode) handleSaveDue()
-                        if (e.key === 'Escape') handleCancelDue()
+                        if (e.key === 'Enter') saveTaskEdits()
+                        if (e.key === 'Escape') discardTaskEdits()
                       }}
                       autoFocus
                       className={`rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-2 py-1 text-[11px] font-black ${theme.colors.ui.text} focus:outline-none`}
@@ -320,18 +284,6 @@ export const TaskCard = ({
                 ) : (
                   <div className="flex items-center gap-1.5 group/due">
                     <span className={`font-bold ${theme.colors.ui.text}`}>{formatDue(task.dueAt)}</span>
-                    {!isTaskEditMode && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingDue(true)}
-                        className="opacity-0 group-hover/due:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                        title="Edit due date"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
-                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
-                        </svg>
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -381,27 +333,14 @@ export const TaskCard = ({
           <div className="mt-3">
             <div className="flex items-center gap-1.5 mb-1.5 group/desc">
               <p className={`text-[9px] font-black uppercase tracking-wider ${theme.colors.ui.textLight}`}>Description</p>
-              {!editingDescription && (
-                <button
-                  type="button"
-                  onClick={() => setEditingDescription(true)}
-                  className="opacity-0 group-hover/desc:opacity-100 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                  title="Edit description"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={theme.colors.ui.textLight}>
-                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
-                  </svg>
-                </button>
-              )}
             </div>
-            {editingDescription ? (
+            {isTaskEditMode ? (
               <textarea
                 value={descriptionDraft}
                 onChange={(e) => setDescriptionDraft(e.target.value)}
-                onBlur={handleSaveDescription}
                 onKeyDown={(e) => {
-                  if (e.key === 'Escape') handleCancelDescription()
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveDescription()
+                  if (e.key === 'Escape') discardTaskEdits()
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveTaskEdits()
                 }}
                 autoFocus
                 className={`w-full rounded-xl border ${theme.colors.ui.input} p-3 text-xs font-medium focus:outline-none transition-all resize-none`}
