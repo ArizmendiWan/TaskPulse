@@ -146,6 +146,40 @@ export const theme = {
       input: 'bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-800 focus:border-amber-400 dark:focus:border-amber-500 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-900/30 transition-all outline-none',
     },
 
+    // Notification colors
+    notification: {
+      bell: {
+        active: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+        badge: 'bg-rose-500 text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/30',
+        unreadBadge: 'bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400',
+      },
+      sendButton: {
+        active: 'bg-rose-500 text-white hover:bg-rose-600 dark:bg-rose-500 dark:text-white dark:hover:bg-rose-600',
+        disabled: 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed',
+      },
+      panel: {
+        bg: 'bg-white dark:bg-slate-900',
+        border: 'border-slate-200 dark:border-slate-800',
+        headerBorder: 'border-slate-100 dark:border-slate-800',
+      },
+      item: {
+        unread: {
+          bg: 'bg-amber-50/50 dark:bg-amber-900/10',
+          border: 'border-amber-50 dark:border-amber-900/20',
+          dot: 'bg-amber-500',
+        },
+        read: {
+          bg: 'bg-white dark:bg-slate-900',
+          border: 'border-slate-50 dark:border-slate-800/50',
+        },
+      },
+      empty: {
+        icon: 'text-slate-300 dark:text-slate-600',
+        text: 'text-slate-400 dark:text-slate-500',
+        textSecondary: 'text-slate-400 dark:text-slate-600',
+      },
+    },
+
     // Special effects
     effects: {
       glow: {

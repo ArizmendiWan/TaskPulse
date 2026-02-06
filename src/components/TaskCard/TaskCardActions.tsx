@@ -33,6 +33,7 @@ export const TaskCardActions = ({
         setShowAssignDropdown(false)
       }
       if (remindRef.current && !remindRef.current.contains(event.target as Node)) {
+        // Close popover but keep the draft message
         setShowRemindPopover(false)
       }
     }
@@ -40,11 +41,13 @@ export const TaskCardActions = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Focus textarea when popover opens
+  // Focus textarea when popover opens (without selecting text)
   useEffect(() => {
     if (showRemindPopover && textareaRef.current) {
       textareaRef.current.focus()
-      textareaRef.current.select()
+      // Move cursor to end instead of selecting all
+      const length = textareaRef.current.value.length
+      textareaRef.current.setSelectionRange(length, length)
     }
   }, [showRemindPopover])
 
@@ -91,7 +94,10 @@ export const TaskCardActions = ({
   const showRemind = (isOverdue(task, now) || isDueSoon(task, now)) && task.members.length > 0
 
   const openRemindPopover = () => {
-    setRemindMessage(getDefaultMessage())
+    // Only set default message if there's no draft
+    if (!remindMessage.trim()) {
+      setRemindMessage(getDefaultMessage())
+    }
     setShowRemindPopover(true)
   }
 
@@ -105,7 +111,7 @@ export const TaskCardActions = ({
 
   const handleCancelReminder = () => {
     setShowRemindPopover(false)
-    setRemindMessage('')
+    // Keep the draft message when canceling
   }
 
   return (
@@ -151,7 +157,11 @@ export const TaskCardActions = ({
           {showRemindPopover && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[60] p-3 animate-in fade-in slide-in-from-top-2 duration-200"
+              className={`absolute top-full mt-2 left-1/2 sm:left-auto -translate-x-1/2 sm:translate-x-0 right-auto sm:right-0 ${theme.colors.ui.surface} rounded-xl shadow-2xl border ${theme.colors.ui.borderStrong} z-[60] p-3 animate-in fade-in slide-in-from-top-2 duration-200`}
+              style={{ 
+                width: 'min(calc(100vw - 2rem), 24rem)',
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
             >
               <p className={`text-[9px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} mb-2`}>
                 Send an in-app reminder to assignees
@@ -171,7 +181,7 @@ export const TaskCardActions = ({
                   }
                 }}
                 rows={3}
-                className={`w-full rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2 text-xs font-medium ${theme.colors.ui.text} focus:outline-none focus:border-amber-400 transition-all resize-none`}
+                className={`w-full rounded-lg border ${theme.colors.ui.borderStrong} ${theme.colors.ui.background} px-3 py-2 text-xs font-medium ${theme.colors.ui.text} focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 transition-all resize-none`}
                 placeholder="Write your reminder message..."
               />
               <div className="flex items-center justify-between mt-2">
@@ -182,7 +192,7 @@ export const TaskCardActions = ({
                   <button
                     type="button"
                     onClick={handleCancelReminder}
-                    className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all`}
+                    className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${theme.colors.ui.textLight} ${theme.colors.action.secondary.hover} transition-all`}
                   >
                     Cancel
                   </button>
@@ -192,8 +202,8 @@ export const TaskCardActions = ({
                     disabled={!remindMessage.trim()}
                     className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 ${
                       remindMessage.trim()
-                        ? 'bg-rose-500 text-white hover:bg-rose-600'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                        ? theme.colors.notification.sendButton.active
+                        : `${theme.colors.notification.sendButton.disabled}`
                     }`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
