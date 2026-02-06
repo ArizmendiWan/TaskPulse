@@ -61,7 +61,6 @@ function App() {
   const {
     notifications,
     unreadCount: notificationUnreadCount,
-    totalUnreadCount: notificationTotalUnread,
     markRead: markNotificationRead,
     markAllRead: markAllNotificationsRead,
     clearRead: clearReadNotifications,

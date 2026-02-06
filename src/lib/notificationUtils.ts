@@ -42,7 +42,6 @@ export async function sendInAppNotifications(
   try {
     console.log('[notifications] Preparing to send to recipients:', recipientIds)
     const batch = writeBatch(db)
-    const notificationData = { ...base, recipientId: '' } // placeholder
     
     for (const recipientId of recipientIds) {
       const docRef = doc(collection(db, NOTIFICATIONS_COLLECTION))
