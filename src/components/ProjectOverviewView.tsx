@@ -1,6 +1,7 @@
-import type { Project } from '../types'
+import type { Project, NotificationItem } from '../types'
 import { projectStats } from '../constants'
 import { theme } from '../theme'
+import { NotificationBell } from './NotificationBell'
 
 interface ProjectOverviewViewProps {
   currentUserName: string | null
@@ -12,6 +13,11 @@ interface ProjectOverviewViewProps {
   onGoToCreate: () => void
   onGoToProject: (id: string) => void
   onOpenDeleteModal: (project: Project) => void
+  notifications: NotificationItem[]
+  notificationUnreadCount: number
+  onMarkNotificationRead: (id: string) => void
+  onMarkAllNotificationsRead: () => void
+  onClearReadNotifications: () => void
 }
 
 export const ProjectOverviewView = ({
@@ -24,6 +30,11 @@ export const ProjectOverviewView = ({
   onGoToCreate,
   onGoToProject,
   onOpenDeleteModal,
+  notifications,
+  notificationUnreadCount,
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
+  onClearReadNotifications,
 }: ProjectOverviewViewProps) => {
   return (
     <div className={`min-h-screen ${theme.colors.ui.background} ${theme.colors.ui.text} pb-12 transition-colors duration-300`}>
@@ -39,6 +50,15 @@ export const ProjectOverviewView = ({
             </p>
           </div>
           <div className="flex flex-wrap justify-center md:justify-end gap-2 md:gap-3 items-center">
+            {currentUserId && (
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={notificationUnreadCount}
+                onMarkRead={onMarkNotificationRead}
+                onMarkAllRead={onMarkAllNotificationsRead}
+                onClearRead={onClearReadNotifications}
+              />
+            )}
             <button
               onClick={onToggleDarkMode}
               className={`p-3 rounded-2xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}

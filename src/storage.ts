@@ -1,9 +1,8 @@
-import type { NotificationItem, Project } from './types'
+import type { Project } from './types'
 
 const PROJECTS_KEY = 'taskpulse.projects.v1'
 const USER_ID_KEY = 'taskpulse.user_id.v1'
 const USER_NAME_KEY = 'taskpulse.user_name.v1'
-const NOTIFICATIONS_KEY = 'taskpulse.notifications.v1'
 
 export function loadProjects(): Project[] {
   if (typeof localStorage === 'undefined') return []
@@ -56,31 +55,5 @@ export function saveMemberInfo(id: string | null, name: string | null) {
     else localStorage.removeItem(USER_NAME_KEY)
   } catch (err) {
     console.warn('Failed to save member info', err)
-  }
-}
-
-function getNotificationsKey(userId: string | null) {
-  return userId ? `${NOTIFICATIONS_KEY}.${userId}` : `${NOTIFICATIONS_KEY}.anon`
-}
-
-export function loadNotifications(userId: string | null): NotificationItem[] {
-  if (typeof localStorage === 'undefined') return []
-  try {
-    const raw = localStorage.getItem(getNotificationsKey(userId))
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as NotificationItem[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch (err) {
-    console.warn('Failed to read notifications from storage', err)
-    return []
-  }
-}
-
-export function saveNotifications(userId: string | null, notifications: NotificationItem[]) {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(getNotificationsKey(userId), JSON.stringify(notifications))
-  } catch (err) {
-    console.warn('Failed to save notifications to storage', err)
   }
 }

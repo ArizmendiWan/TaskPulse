@@ -1,11 +1,11 @@
 import React, { Suspense } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import type { NotificationItem, Project, Task, TaskStatus } from '../types'
+import type { Project, Task, TaskStatus, NotificationItem } from '../types'
 import { type FilterKey, filterLabels, projectShareLink } from '../constants'
 import { theme } from '../theme'
 import { Sidebar } from './Sidebar'
-import { NotificationBar } from './NotificationBar'
 import { TaskCard } from './TaskCard'
+import { NotificationBell } from './NotificationBell'
 const AiChatWidget = React.lazy(() =>
   import('../features/ai/AiChatWidget').then((m) => ({ default: m.AiChatWidget }))
 )
@@ -50,10 +50,10 @@ interface ProjectDashboardViewProps {
   onTogglePin: (task: Task) => void
   onOpenAI: () => void
   notifications: NotificationItem[]
-  unreadCount: number
-  onMarkRead: (id: string) => void
-  onMarkAllRead: () => void
-  onClearRead: () => void
+  notificationUnreadCount: number
+  onMarkNotificationRead: (id: string) => void
+  onMarkAllNotificationsRead: () => void
+  onClearReadNotifications: () => void
 }
 
 export const ProjectDashboardView = ({
@@ -94,12 +94,11 @@ export const ProjectDashboardView = ({
   onAssignMembers,
   onUpdateUserName,
   onTogglePin,
-  onOpenAI,
   notifications,
-  unreadCount,
-  onMarkRead,
-  onMarkAllRead,
-  onClearRead,
+  notificationUnreadCount,
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
+  onClearReadNotifications,
 }: ProjectDashboardViewProps) => {
   const [copyFeedback, setCopyFeedback] = React.useState(false)
   const [showQR, setShowQR] = React.useState(false)
@@ -458,6 +457,13 @@ export const ProjectDashboardView = ({
               </div>
             </div>
 
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={notificationUnreadCount}
+              onMarkRead={onMarkNotificationRead}
+              onMarkAllRead={onMarkAllNotificationsRead}
+              onClearRead={onClearReadNotifications}
+            />
             <button
               onClick={onToggleDarkMode}
               className={`p-2 md:p-3 rounded-xl ${theme.colors.action.secondary.bg} ${theme.colors.action.secondary.text} ${theme.colors.action.secondary.hover} transition-all shadow-sm`}
@@ -482,13 +488,6 @@ export const ProjectDashboardView = ({
 
         <div className="flex-1 overflow-y-auto px-4 pt-6 pb-12 md:px-12">
           <div className="max-w-4xl mx-auto space-y-6">
-            <NotificationBar
-              notifications={notifications}
-              unreadCount={unreadCount}
-              onMarkRead={onMarkRead}
-              onMarkAllRead={onMarkAllRead}
-              onClearRead={onClearRead}
-            />
             {isLoadingProject ? (
               <div className="flex flex-col items-center justify-center py-20 animate-pulse">
                 <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">

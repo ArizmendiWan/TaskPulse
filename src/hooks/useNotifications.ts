@@ -1,75 +1,73 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { NotificationItem, NotificationType } from '../types'
-import { loadNotifications, saveNotifications } from '../storage'
-import { uuid } from '../constants'
-
-const MAX_NOTIFICATIONS = 200
-
-const hasNonEnglishChars = (value: string) => /[^\u0000-\u007f]/.test(value)
-
-const pruneNotifications = (items: NotificationItem[]) => {
-  const now = Date.now()
-  return items.filter((item) => {
-    if (!item.expiresAt) return true
-    return new Date(item.expiresAt).getTime() > now
-  }).filter((item) => !(hasNonEnglishChars(item.title) || hasNonEnglishChars(item.message)))
-}
-
-interface AddNotificationInput {
-  type: NotificationType
-  title: string
-  message: string
-  projectId?: string
-  taskId?: string
-  actorId?: string
-  expiresAt?: string
-}
+import type { NotificationItem } from '../types'
+import {
+  subscribeToNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  clearReadNotifications,
+} from '../lib/notificationUtils'
 
 export function useNotifications(userId: string | null, activeProjectId?: string | null) {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() =>
-    pruneNotifications(loadNotifications(userId)),
-  )
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
+  // Subscribe to real-time Firestore notifications
   useEffect(() => {
-    setNotifications(pruneNotifications(loadNotifications(userId)))
-  }, [userId])
-
-  useEffect(() => {
-    saveNotifications(userId, notifications)
-  }, [userId, notifications])
-
-  const addNotification = useCallback((input: AddNotificationInput) => {
-    const newItem: NotificationItem = {
-      id: uuid(),
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      createdAt: new Date().toISOString(),
-      read: false,
-      projectId: input.projectId,
-      taskId: input.taskId,
-      actorId: input.actorId,
-      expiresAt: input.expiresAt,
+    if (!userId) {
+      console.log('[useNotifications] No userId, clearing notifications')
+      setNotifications([])
+      return
     }
 
-    setNotifications((prev) => {
-      const next = [newItem, ...prev]
-      const pruned = pruneNotifications(next)
-      return pruned.slice(0, MAX_NOTIFICATIONS)
+    console.log('[useNotifications] Setting up subscription for user:', userId)
+
+    let isActive = true
+    const unsubscribe = subscribeToNotifications(userId, (items) => {
+      if (!isActive) {
+        console.warn('[useNotifications] Received callback after unmount, ignoring')
+        return
+      }
+      console.log('[useNotifications] Received', items.length, 'notifications:', items.map(i => ({ id: i.id, title: i.title, read: i.read })))
+      setNotifications(items)
     })
-  }, [])
 
-  const markRead = useCallback((id: string) => {
+    return () => {
+      console.log('[useNotifications] Cleaning up subscription for user:', userId)
+      isActive = false
+      unsubscribe()
+    }
+  }, [userId])
+
+  const markRead = useCallback(async (id: string) => {
+    // Optimistic update
     setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, read: true } : item)))
+    try {
+      await markNotificationRead(id)
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err)
+    }
   }, [])
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
+    if (!userId) return
+    // Optimistic update
     setNotifications((prev) => prev.map((item) => (item.read ? item : { ...item, read: true })))
-  }, [])
+    try {
+      await markAllNotificationsRead(userId)
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err)
+    }
+  }, [userId])
 
-  const clearRead = useCallback(() => {
+  const clearRead = useCallback(async () => {
+    if (!userId) return
+    // Optimistic update
     setNotifications((prev) => prev.filter((item) => !item.read))
-  }, [])
+    try {
+      await clearReadNotifications(userId)
+    } catch (err) {
+      console.error('Failed to clear read notifications:', err)
+    }
+  }, [userId])
 
   const visibleNotifications = useMemo(() => {
     if (!activeProjectId) return notifications
@@ -83,8 +81,9 @@ export function useNotifications(userId: string | null, activeProjectId?: string
 
   return {
     notifications: visibleNotifications,
+    allNotifications: notifications,
     unreadCount,
-    addNotification,
+    totalUnreadCount: notifications.filter((item) => !item.read).length,
     markRead,
     markAllRead,
     clearRead,

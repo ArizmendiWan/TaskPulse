@@ -65,6 +65,7 @@ export type NotificationType = 'info' | 'success' | 'warning' | 'error'
 
 export interface NotificationItem {
   id: string
+  recipientId: string
   type: NotificationType
   title: string
   message: string
@@ -73,6 +74,7 @@ export interface NotificationItem {
   projectId?: string
   taskId?: string
   actorId?: string
+  senderName?: string
   expiresAt?: string
 }
 
