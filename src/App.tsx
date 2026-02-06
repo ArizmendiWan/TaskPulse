@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, Suspense } from 'react'
 import type { Project, Task, TaskStatus, User } from './types'
 import { getUserByEmail, saveUser, getUserById } from './lib/userUtils'
-import { sendNudgeEmails } from './utilities/emailService'
 import {
   filterDueSoon,
   filterOpen,
@@ -20,6 +19,7 @@ import {
 import { useAuth } from './hooks/useAuth'
 import { useProjects } from './hooks/useProjects'
 import { useUserCache } from './hooks/useUserCache'
+import { useNotifications } from './hooks/useNotifications'
 import { LoginView } from './components/LoginView'
 import { CreateProjectView } from './components/CreateProjectView'
 import { ProjectOverviewView } from './components/ProjectOverviewView'
@@ -56,6 +56,14 @@ function App() {
   } = useProjects(currentUserId, initialProjectId)
 
   const { userCache, setUserCache, getUserName } = useUserCache(projects)
+  const {
+    notifications,
+    unreadCount,
+    addNotification,
+    markRead,
+    markAllRead,
+    clearRead,
+  } = useNotifications(currentUserId, activeProjectId)
 
   const [view, setView] = useState<'overview' | 'project' | 'create' | 'login'>(initialView)
   const [filter, setFilter] = useState<FilterKey>(() => {
@@ -371,6 +379,14 @@ function App() {
     upsertProject((p) => {
       return { ...p, tasks: [...p.tasks, newTask] }
     })
+    addNotification({
+      type: 'success',
+      title: 'Task Posted',
+      message: `Task "${newTask.title}" was added to the project.`,
+      projectId: activeProject.id,
+      taskId: newTask.id,
+      actorId: currentUserId,
+    })
     setTaskForm({ title: '', description: '', dueAt: '', members: [] })
     setShowTaskModal(false)
   }
@@ -410,6 +426,17 @@ function App() {
       
       return updated
     })
+
+    if (resolvedStatus === 'done') {
+      addNotification({
+        type: 'success',
+        title: 'Task Completed',
+        message: `Task "${task.title}" was marked as done.`,
+        projectId: activeProject?.id,
+        taskId: task.id,
+        actorId: currentUserId || undefined,
+      })
+    }
   }
 
   const handleTitleChange = (task: Task, next: string) => {
@@ -502,44 +529,51 @@ function App() {
   }
 
   const handleNudge = async (task: Task, message: string) => {
-    if (task.members.length === 0) return alert('No one has claimed this task yet!')
+    if (task.members.length === 0) {
+      addNotification({
+        type: 'warning',
+        title: 'Nudge Unavailable',
+        message: 'No one has claimed this task yet, so a nudge cannot be sent.',
+        projectId: activeProject?.id,
+        taskId: task.id,
+        actorId: currentUserId || undefined,
+      })
+      return
+    }
 
     // Check cooldown (3 hours)
     if (!canNudge(task)) {
       const nextNudge = getNextNudgeTime(task)
       if (nextNudge) {
         const hoursLeft = Math.ceil((nextNudge.getTime() - new Date().getTime()) / (1000 * 60 * 60))
-        return alert(`Please wait ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} before nudging again to avoid spamming team members (3h cooldown).`)
+        addNotification({
+          type: 'warning',
+          title: 'Nudge Too Frequent',
+          message: `Please wait ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} before nudging again (3-hour cooldown).`,
+          projectId: activeProject?.id,
+          taskId: task.id,
+          actorId: currentUserId || undefined,
+        })
+        return
       }
     }
-    
-    const due = formatDue(task.dueAt)
-    
-    // Get emails from all members
-    const emails = task.members.map((m) => userCache[m]?.email).filter(Boolean) as string[]
-    if (emails.length === 0) return alert('No emails found!')
 
-    try {
-      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
-      await sendNudgeEmails({
-        taskTitle: task.title,
-        dueAt: due,
-        recipientEmails: emails,
-        senderName: currentUserName || 'Teammate',
-        message,
-      })
-      // Store the nudge timestamp
-      handleUpdateTask(task.id, (t) => ({
-        ...t,
-        lastNudgedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }))
-      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
-      setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
-    } catch (err) {
-      setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'error' }))
-      setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
-    }
+    setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sending' }))
+    handleUpdateTask(task.id, (t) => ({
+      ...t,
+      lastNudgedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }))
+    setNudgeFeedback((prev) => ({ ...prev, [task.id]: 'sent' }))
+    addNotification({
+      type: 'success',
+      title: 'Nudge Sent',
+      message: `An in-app reminder was sent to task members for "${task.title}".`,
+      projectId: activeProject?.id,
+      taskId: task.id,
+      actorId: currentUserId || undefined,
+    })
+    setTimeout(() => setNudgeFeedback((prev) => ({ ...prev, [task.id]: null })), 3000)
   }
 
   const handleAssignMembers = (task: Task, memberIds: string[]) => {
@@ -727,6 +761,11 @@ function App() {
             onTogglePin={handleToggleTaskPin}
             onOpenAI={() => setAiOpen(true)}
             aiContextHint={aiContextHint}
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkRead={markRead}
+            onMarkAllRead={markAllRead}
+            onClearRead={clearRead}
           />
         ) : isLoadingProject ? (
           <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">

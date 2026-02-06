@@ -61,3 +61,18 @@ export interface User {
   updatedAt: string
 }
 
+export type NotificationType = 'info' | 'success' | 'warning' | 'error'
+
+export interface NotificationItem {
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  createdAt: string
+  read: boolean
+  projectId?: string
+  taskId?: string
+  actorId?: string
+  expiresAt?: string
+}
+
