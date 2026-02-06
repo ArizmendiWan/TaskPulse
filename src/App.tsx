@@ -501,7 +501,7 @@ function App() {
     }
   }
 
-  const handleNudge = async (task: Task) => {
+  const handleNudge = async (task: Task, message: string) => {
     if (task.members.length === 0) return alert('No one has claimed this task yet!')
 
     // Check cooldown (3 hours)
@@ -526,6 +526,7 @@ function App() {
         dueAt: due,
         recipientEmails: emails,
         senderName: currentUserName || 'Teammate',
+        message,
       })
       // Store the nudge timestamp
       handleUpdateTask(task.id, (t) => ({

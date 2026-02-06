@@ -13,7 +13,7 @@ export interface TaskCardProps {
   onUpdateComment: (task: Task, commentId: string, text: string) => void
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
-  onNudge: (task: Task) => void
+  onNudge: (task: Task, message: string) => void
   onTogglePin: (task: Task) => void
   getUserName: (userId: string | null) => string
   onAssignMembers: (task: Task, memberIds: string[]) => void
@@ -39,7 +39,7 @@ export interface TaskCardActionsProps {
   onLeaveTask: (task: Task) => void
   onStatusChange: (task: Task, next: TaskStatus) => void
   onAssignMembers: (task: Task, memberIds: string[]) => void
-  onNudge: (task: Task) => void
+  onNudge: (task: Task, message: string) => void
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   projectMembers: string[]
   getUserName: (userId: string | null) => string
@@ -51,7 +51,7 @@ export interface TaskCardActionsProps {
 
 export interface TaskStatusBadgesProps {
   task: Task
-  onNudge: (task: Task) => void
+  onNudge: (task: Task, message: string) => void
   nudgeFeedback: Record<string, 'sending' | 'sent' | 'error' | null>
   isUnclaimed: boolean
   overdue: boolean

@@ -5,6 +5,7 @@ type NudgeEmailPayload = {
   dueAt: string
   recipientEmails: string[]
   senderName: string
+  message?: string
 }
 
 export default async function handler(req: any, res: any) {
@@ -13,7 +14,7 @@ export default async function handler(req: any, res: any) {
     return
   }
 
-  const { taskTitle, dueAt, recipientEmails, senderName } = (req.body || {}) as NudgeEmailPayload
+  const { taskTitle, dueAt, recipientEmails, senderName, message } = (req.body || {}) as NudgeEmailPayload
 
   if (!taskTitle || !dueAt || !senderName || !Array.isArray(recipientEmails)) {
     res.status(400).json({ error: 'Invalid request payload.' })
@@ -42,8 +43,10 @@ export default async function handler(req: any, res: any) {
     },
   })
 
-  const subject = `TaskPulse Nudge: ${taskTitle}`
-  const text = `Hey — "${taskTitle}" is due ${dueAt}. Can you start it or update the status?\n\nFrom ${senderName}`
+  const subject = `TaskPulse Reminder: ${taskTitle}`
+  const text = message
+    ? `${message}\n\n— ${senderName} via TaskPulse`
+    : `Hey — "${taskTitle}" is due ${dueAt}. Can you start it or update the status?\n\nFrom ${senderName}`
 
   try {
     await transporter.sendMail({

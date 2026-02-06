@@ -43,7 +43,7 @@ interface ProjectDashboardViewProps {
   onUpdateComment: (task: Task, commentId: string, text: string) => void
   onDeleteComment: (task: Task, commentId: string) => void
   onDeleteTask: (task: Task) => void
-  onNudge: (task: Task) => void
+  onNudge: (task: Task, message: string) => void
   onAssignMembers: (task: Task, memberIds: string[]) => void
   onUpdateUserName: (newName: string) => Promise<void>
   onTogglePin: (task: Task) => void

@@ -4,6 +4,7 @@ export interface NudgeEmailPayload {
   dueAt: string
   recipientEmails: string[]
   senderName: string
+  message?: string
 }
 
 export async function sendNudgeEmails(payload: NudgeEmailPayload): Promise<void> {
